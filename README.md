@@ -1,5 +1,5 @@
 # SIADs_Audio_Text_SRS
-![Alt text here](Resources\Project_Flow_Diagram.drawio.png)
+![Alt text here](Resources/Project_Flow_Diagram.drawio.png)
 
 ##Step 1: Create a Virtual Enviroment
 - created in a Python 3.10.11 instance
