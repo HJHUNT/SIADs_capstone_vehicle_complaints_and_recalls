@@ -9,6 +9,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
+import nltk
+# check to see if the nltk data has been downloaded in the virtual environment
+if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
+    # download the nltk data
+    nltk.download('stopwords')
+    nltk.download('punkt_tab')
 
 
 class TextClassifier:
