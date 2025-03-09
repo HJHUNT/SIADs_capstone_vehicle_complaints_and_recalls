@@ -2,13 +2,10 @@
 from Text_Query import *
 import streamlit as st
 
-n = 20
+n = 25
 # create a list from 1 to 15
 desired_top_complaints = list(range(1, n))
 
-n = 20
-# create a list from 1 to 15
-desired_top_complaints = list(range(1, n))
 
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
 # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
@@ -50,8 +47,9 @@ default_complaint_test_query = "Battery dies after a few days of not driving the
 #print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
 #print(most_similar_complaint["CDESCR"])
 
-# set the page configuration to wide
-st.set_page_config(layout="wide")
+# set the page configuration to wide and make it dark mode
+st.set_page_config(layout="wide", page_title="Complaint Finder", page_icon="🚗", initial_sidebar_state="expanded")
+
 
 col_1, col_2 = st.columns(2)
 

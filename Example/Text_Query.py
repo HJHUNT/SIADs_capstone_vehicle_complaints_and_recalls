@@ -229,6 +229,7 @@ class TextClassifier:
         """
         Find the most similar complaint to a query text in the training set
         """
+        self.rank_count = top_n
         # process the query text
         query_text_cleaned = TextClassifier.process_text(query_text)
         # vectorize the query text
@@ -243,6 +244,8 @@ class TextClassifier:
         print(most_similar_index_query)
         # get the most similar complaint in the training set
         most_similar_complaint_train_query = self.df_train.iloc[most_similar_index_query]
+        # keep track of the top to decrease the rank count of the most similar complaints add this as a column to the datafram
+        most_similar_complaint_train_query["rank"] = range(1, top_n + 1)
         return most_similar_complaint_train_query
 
     # A functionalized process for fitting a kmeans model to the training data
@@ -274,6 +277,7 @@ class TextClassifier:
         """
         Predict the cluster of a query text
         """
+        self.query_text = query_text
         # process the query text
         query_text_cleaned = TextClassifier.process_text(query_text)
         # vectorize the query text
@@ -328,20 +332,29 @@ class TextClassifier:
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
         temp_df['query_vectorized_y'] = query_vectorized[:, 1]
+        temp_df['query_text'] = self.query_text
+        # add the query text to the dataframe
 
         most_similar_complaint_df['x'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0])
         most_similar_complaint_df['y'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1])
 
-        most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125, color='red', fill = "red").encode(
+
+        most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
-            tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC']#, 'CDESCR']
+            color=alt.Color("color:N", scale=alt.Scale(range=["FF0000"]), legend=alt.Legend(title="", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value('red'),
+            #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
+            tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
         )
 
         # create a Altaire chart for the query text
-        query = alt.Chart(temp_df).mark_point(size=125, color='black', fill = "black").encode(
+        query = alt.Chart(temp_df).mark_point(size=125).transform_calculate(color='"Query Text"').encode(
             x=alt.X('query_vectorized_x', axis=None),
             y=alt.Y('query_vectorized_y',  axis=None),
+            color=alt.Color("color:N", scale=alt.Scale(range=["FFFFFF"]), legend=alt.Legend(title="Query Text", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value('white'),
+            tooltip=['query_text']
         )
 
         # Create an Altair chart for the cluster of the training data
@@ -349,13 +362,17 @@ class TextClassifier:
         PCA_cluster = alt.Chart(self.df_train).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='viridis'),legend=alt.Legend(columns=5, title="Cluster", symbolLimit=0)),#, orient="bottom")),
-            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC']#, 'CDESCR']
-        ).properties(title=title, width=700, height=700)#.interactive()
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='viridis'),legend=alt.Legend(columns=6, title="Clusters", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
+        ).properties(title=title, width=900, height=900)#.interactive()
 
-        chart = PCA_cluster + query + most_sim 
+        #chart = PCA_cluster + query + most_sim 
 
-        chart.configure(background='#FFFFFF') 
+        # use alt.layer() to create a layered chart
+        chart = alt.layer(query, most_sim, PCA_cluster).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+        #.configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+
+        #chart.configure(background='#FFFFFF') 
     
         #chart.save('filename.html')
 
