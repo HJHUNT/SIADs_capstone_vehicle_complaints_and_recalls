@@ -171,6 +171,10 @@ cython_debug/
 .pypirc
 
 # ignore the Output folder contents
+<<<<<<< HEAD
 Output/.
+=======
+Output/*
+>>>>>>> 0aa8b81 (Fix the gitignore file to ignore the input folder)
 Scripts/
-Datasets/
+Datasets/*
