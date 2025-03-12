@@ -147,6 +147,8 @@ class TextClassifier:
 
         progress_bar.update(1)
 
+        progress_bar.update(1)
+
         # check to see if there is a pickle file for the vectorizer
         
         if (os.path.exists(self.desired_save_path + "//" + self.column_name + "_vectorizer.pkl") and os.path.exists(self.desired_save_path + "//" + self.column_name + "_x_train_vect.pkl") and os.path.exists(self.desired_save_path + "//" + self.column_name + "_x_test_vect.pkl") and os.path.exists(self.desired_save_path + "//" + self.column_name + "_x_validation_vect.pkl")):
@@ -394,6 +396,9 @@ if __name__ == "__main__":
     state_encode = "COMPDESC_StateEncoded"
     # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
     df_complaints[state_encode] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
+
+    # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+    df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
 
     # create a list of unique manufacturers in the "MFR_NAME" column
     # list_of_manufacturers = df_complaints["MFR_NAME"].unique()
