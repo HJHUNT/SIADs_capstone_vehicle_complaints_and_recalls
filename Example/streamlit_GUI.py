@@ -53,6 +53,8 @@ st.set_page_config(layout="wide", page_title="Complaint Finder", page_icon="🚗
 
 col_1, col_2 = st.columns(2)
 
+left_col, right_col = st.columns(2)
+
 # Title of the web app
 st.sidebar.title("Complaint Finder")
 
