@@ -27,7 +27,8 @@ class TextClassifier:
         self.random_state = 42
         # create a TfidfVectorizer object
         self.vectorizer = TfidfVectorizer()
-        self.classifier_kmeans = RandomForestClassifier(n_estimators=100, random_state=self.random_state)
+        self.classifier_kmeans = KMeans(n_clusters=150, random_state=self.random_state, n_init=100, max_iter=1000)
+        self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
         # set the number of dimensions to reduce the vectorized data to
         self.num_dimensions = 384   # medium number of dimensions for better performance
         self.df = df
@@ -189,22 +190,27 @@ class TextClassifier:
         return most_similar_complaint_train_query
     
     # A functionalized process for fitting a kmeans model to the training data
-    def fit_kmeans(self):
+    def fit_kmeans(self,col_name:str):
         """
         Fit a KMeans model to the training data
         """
         # check to see if there is a pickle file for the classifier
-        if os.path.exists(self.desired_save_path + '//' + self.column_name + "_classifier_kmeans.pkl"):
+        if os.path.exists(self.desired_save_path + '//' + self.column_name + "_classifier_kmeans.pkl") and os.path.exists(self.desired_save_path + '//' + self.column_name + "_classifier_RFC.pkl"):
             # load the pickle file
             with open(self.desired_save_path + '//' + self.column_name + "_classifier_kmeans.pkl", "rb") as f:
                 self.classifier_kmeans = pickle.load(f)
+            with open(self.desired_save_path + '//' + self.column_name + "_classifier_RFC.pkl", "rb") as f:
+                self.classifier_RFC = pickle.load(f)
         else:
             # fit the KMeans model to the training data
-            self.classifier_kmeans.fit(self.complaints_vectorized_train, self.df_train["COMPDESC_StateEncoded"])
+            self.classifier_kmeans.fit(self.complaints_vectorized_train, self.df_train[col_name])
+            # fit the Random Forest Classifier model to the training data
+            self.classifier_RFC.fit(self.complaints_vectorized_train, self.df_train[col_name])
             # create a pickle file for the classifier
             with open(self.desired_save_path + '//' + self.column_name + "_classifier_kmeans.pkl", "wb") as f:
                 pickle.dump(self.classifier_kmeans, f)
-
+            with open(self.desired_save_path + '//' + self.column_name + "_classifier_RFC.pkl", "wb") as f:
+                pickle.dump(self.classifier_RFC, f)
         return self.classifier_kmeans
 
     # predict the cluster off the query text
@@ -218,11 +224,16 @@ class TextClassifier:
         query_vectorized = self.vectorizer.transform([" ".join(query_text_cleaned)])
         # reduce the dimensionality of the query vector
         query_vectorized_lsa = self.lsa.transform(query_vectorized)
-        # predict the cluster of the query text
-        cluster = self.classifier_kmeans.predict(query_vectorized_lsa)
-        # convert the predicted cluster value back to the original value from the "COMPDESC" column
-        cluster_pred = LabelEncoder().fit(self.df["COMPDESC"]).inverse_transform(cluster)
-        return cluster_pred
+        # predict the kmeans cluster of the query text
+        cluster_kmeans = self.classifier_kmeans.predict(query_vectorized_lsa)
+        # predict the Random Forest Classifier cluster of the query text
+        cluster_RFC = self.classifier_RFC.predict(query_vectorized_lsa)
+        # convert the kmenas predicted cluster value back to the original value from the "COMPDESC" column
+        cluster_kmeans_pred = LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_kmeans)
+        # convert the Random Forest Classifier predicted cluster value back to the original value from the "COMPDESC" column
+        cluster_RFC_pred = LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_RFC)
+        # return the predicted cluster
+        return cluster_kmeans_pred, cluster_RFC_pred
     
 # run the below code if main script
 if __name__ == "__main__":
@@ -246,10 +257,11 @@ if __name__ == "__main__":
     # process the text in the "CDESCR" column
     text_classifier.process_dataframe()
     # fit a KMeans model to the training data
-    text_classifier.fit_kmeans()
+    text_classifier.fit_kmeans("COMPDESC_StateEncoded")
 
     # use one of the complaints in the test set as a query to find the most similar complaint in the training set
     #complaint_test_query = "Battery dies after a few days of not driving the car"
+    #complaint_test_query = "loss of power steering"
     complaint_test_query = "Wheel sounds like it is scraping against something when driving"
 
     print(complaint_test_query)
@@ -259,5 +271,6 @@ if __name__ == "__main__":
     print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
     print(most_similar_complaint["CDESCR"])
     # predict the cluster of the query text
-    cluster = text_classifier.predict_cluster(complaint_test_query)
-    print(cluster)
+    cluster_kmeans_pred, cluster_RFC_pred = text_classifier.predict_cluster(complaint_test_query)
+    print(cluster_kmeans_pred)
+    print(cluster_RFC_pred)
