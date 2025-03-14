@@ -90,41 +90,38 @@ print(complaint_test_query)
 # find the most similar complaint to the complaint test
 most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query)
 # print the most similar complaint with the below columns
-print(
-    most_similar_complaint[
-        ["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]
-    ]
-)
+print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
 print(most_similar_complaint["CDESCR"])
 
-left_col, right_col = st.columns(2)
-
+left_col, right_col = st.columns(2, gap="large")
 # Title of the web app
-st.title("Text Query")
+st.sidebar.title("Complaint Finder")
 
 # Create a text box for the user to input a complaint
-complaint_query = st.text_area(
-    "Enter a complaint", "Battery dies after a few days of not driving the car"
-)
+complaint_query = st.sidebar.text_area("Enter a complaint:", "Battery dies after a few days of not driving the car")
+
 # Create a button for the user to click to find the most similar complaint
-if st.button("Find most similar complaint"):
+if st.sidebar.button("Search and Classify"):
+    
     # find the most similar complaint to the complaint test
     most_similar_complaint = text_classifier.find_similar_complaint(complaint_query)
-    # print the most similar complaint with the below columns
-    st.write(
-        most_similar_complaint[
-            ["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]
-        ]
-    )
-    st.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"])
+    # print the most similar complaint with the below columns make the text bold
+    left_col.header("Cosine Similarity")
+    left_col.subheader("Document Match:")
+    # draw a line on the left column
+    left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
+    left_col.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"])
     # find the user input complaint classification
     cluster_kmeans_pred, cluster_RFC_pred = text_classifier.predict_cluster(complaint_query)
     # output the classification of the query to the right of the input text box
-    st.write("Kmeans Classification of the query: ", cluster_kmeans_pred)
-    st.write("Random Forest Classification of the query: ", cluster_RFC_pred)
-    #st.write("Classification of the query: ", query_classification)
-    
-
+    right_col.header("Kmeans Classification")
+    right_col.subheader("Prediction:")
+    right_col.write(cluster_kmeans_pred[0])
+    right_col.write("---")
+    right_col.header("Random Forest Classification")
+    right_col.subheader("Prediction:")
+    right_col.write(cluster_RFC_pred[0])
+    # st.write("Classification of the query: ", query_classification)
 
 
 # run the streamlit app by running the below command in the terminal

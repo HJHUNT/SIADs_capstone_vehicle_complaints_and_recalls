@@ -14,6 +14,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # check to see if the nltk data has been downloaded in the virtual environment
 if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
@@ -274,3 +276,18 @@ if __name__ == "__main__":
     cluster_kmeans_pred, cluster_RFC_pred = text_classifier.predict_cluster(complaint_test_query)
     print(cluster_kmeans_pred)
     print(cluster_RFC_pred)
+
+    # plot the clusters of the training data for the KMeans model
+    # create a dataframe with the cluster predictions
+    df_train_clustered = text_classifier.df_train.copy()
+    df_train_clustered["Cluster"] = text_classifier.classifier_kmeans.labels_
+    # plot the clusters
+    plt.figure(figsize=(12, 8))
+    sns.scatterplot(x="COMPDESC_StateEncoded", y="Cluster", data=df_train_clustered, palette="viridis")
+    # plot the query text in the plot as a red, with a legend with the predicted cluster
+    plt.scatter(x=most_similar_complaint["COMPDESC_StateEncoded"], y=cluster_kmeans_pred, color="red", label="Query Text")
+    plt.legend("Query Text")
+    plt.title("Clusters of the Training Data")
+    plt.show()
+    plt.close()
+    
