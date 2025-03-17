@@ -112,16 +112,25 @@ if st.sidebar.button("Search and Classify"):
     left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
     left_col.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"])
     # find the user input complaint classification
-    cluster_kmeans_pred, cluster_RFC_pred = text_classifier.predict_cluster(complaint_query)
+    cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
     # output the classification of the query to the right of the input text box
     right_col.header("Kmeans Classification")
     right_col.subheader("Prediction:")
     right_col.write(cluster_kmeans_pred[0])
+    # create a Matplotlib figure and axes
+    fig1, ax1 = plt.subplots()
+    kmeans_fig = text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1)
+    right_col.pyplot(kmeans_fig, use_container_width=True)
+    # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
     right_col.write("---")
     right_col.header("Random Forest Classification")
     right_col.subheader("Prediction:")
     right_col.write(cluster_RFC_pred[0])
     # st.write("Classification of the query: ", query_classification)
+    # Create a Matplotlib figure and axes
+    fig2, ax2 = plt.subplots()
+    RFC_fig = text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2)
+    right_col.pyplot(RFC_fig, use_container_width=True)
 
 
 # run the streamlit app by running the below command in the terminal

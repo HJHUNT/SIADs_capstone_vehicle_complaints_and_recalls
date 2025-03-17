@@ -248,20 +248,21 @@ class TextClassifier:
         return self.cluster_kmeans_pred, self.cluster_RFC_pred, self.query_vectorized_lsa
         
     # Function to plot clusters
-    def plot_clusters(self, labels, title, query_vectorized):
+    def plot_clusters(self, labels, title, query_vectorized,fig, ax):
         # Reduce dimensions of the vetrorized text to 2 for visualization
         X_pca = PCA(n_components=2).fit_transform(self.complaints_vectorized_train)
         # Reduce dimensions of the vetrorized text for the query text for visualization
         #X_pca_query = PCA(n_components=2).fit_transform(query_vectorized)
-        plt.figure(figsize=(10, 5))
-        plt.scatter(X_pca[:, 0], X_pca[:, 1], c=labels, cmap='viridis', s=2)
+        ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels, cmap='viridis', s=2, label="Training Text in Vectorized Space")
         # print a red spot for where the query text is
         #plt.scatter(X_pca_query[:, 0], X_pca_query[:, 1], color="red", label="Query Text")
-        plt.scatter(query_vectorized[:, 0], query_vectorized[:, 1], color="red", label="Query Text")
-        plt.title(title)
-        plt.xlabel('PCA Reduced Dementionality of vectorized complaints text')
-        plt.ylabel('PCA Reduced Dementionality of vectorized complaints text')
-        plt.show()
+        ax.scatter(query_vectorized[:, 0], query_vectorized[:, 1], color="red", label="Query Text in Vectorized Space")
+        ax.set_title(title)
+        ax.set_xlabel('PCA Reduced Dementionality of vectorized complaints text')
+        ax.set_ylabel('PCA Reduced Dementionality of vectorized complaints text')
+        ax.legend()
+        #plt.show()
+        return fig
 
 
 # run the below code if main script
@@ -317,10 +318,14 @@ if __name__ == "__main__":
     silhouette_score_RFC = silhouette_score(text_classifier.complaints_vectorized_train, text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train))
     print(f"Silhouette Score for Random Forest Classifier: {silhouette_score_RFC}")
 
+    # create a Matplotlib figure and axes
+    fig1, ax1 = plt.subplots()
     # plot the clusters of the training data for the KMeans model
-    text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized)
+    text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1)
+    # create a Matplotlib figure and axes
+    fig2, ax2 = plt.subplots()
     # plot the clusters of the training data for the Random Forest Classifier model
-    text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized)
+    text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2)
 
-    # plot the query text in the plot as a red, with a legend with the predicted cluster
-    # plt.scatter(x=most_similar_complaint["COMPDESC_StateEncoded"], y=cluster_kmeans_pred, color="red", label="Query Text")
+    # plot the clusters of the training data for the KMeans model
+    plt.show()
