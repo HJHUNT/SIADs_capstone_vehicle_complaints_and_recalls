@@ -173,6 +173,13 @@ class TextClassifier:
                 pickle.dump(self.complaints_vectorized_validation, f)
 
         progress_bar.update(1)
+
+        # fit the label encoder on the training data
+        self.label_encoder = LabelEncoder().fit(self.df_train["COMPDESC"])
+        # create a pickle file for the label encoder
+        with open(self.desired_save_path + "//" + self.column_name + "_label_encoder.pkl", "wb") as f:
+            pickle.dump(self.label_encoder, f)
+
         progress_bar.close()
 
         end_time = time.time()
@@ -241,9 +248,12 @@ class TextClassifier:
         # predict the Random Forest Classifier cluster of the query text
         cluster_RFC = self.classifier_RFC.predict(self.query_vectorized_lsa)
         # convert the kmenas predicted cluster value back to the original value from the "COMPDESC" column
-        self.cluster_kmeans_pred = (LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_kmeans))
+        self.cluster_kmeans_pred = self.label_encoder.inverse_transform(cluster_kmeans)
+        
+        #(LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_kmeans))
         # convert the Random Forest Classifier predicted cluster value back to the original value from the "COMPDESC" column
-        self.cluster_RFC_pred = (LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_RFC))
+        self.cluster_RFC_pred = self.label_encoder.inverse_transform(cluster_RFC)
+        #(LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_RFC))
         # return the predicted cluster
         return self.cluster_kmeans_pred, self.cluster_RFC_pred, self.query_vectorized_lsa
         
