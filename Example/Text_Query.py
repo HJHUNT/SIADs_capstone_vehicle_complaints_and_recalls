@@ -189,7 +189,7 @@ class TextClassifier:
         return (self.df, self.df_train, self.df_test, self.df_validation, self.lsa, self.vectorizer)
 
     # A functionalized process of finding similar complaints to a query text
-    def find_similar_complaint(self, query_text: str):
+    def find_similar_complaint(self, query_text: str, top_n=1):
         """
         Find the most similar complaint to a query text in the training set
         """
@@ -202,7 +202,8 @@ class TextClassifier:
         # find the cosine similarity between the query vector and all the complaints in the training set
         cosine_similarities_query = cosine_similarity(query_vectorized_lsa, self.complaints_vectorized_train)
         # get the index of the most similar complaint in the training set
-        most_similar_index_query = cosine_similarities_query.argmax()
+        #most_similar_index_query = cosine_similarities_query.argmax()
+        most_similar_index_query = cosine_similarities_query.squeeze().argsort()[:-top_n-1:-1]
         print(most_similar_index_query)
         # get the most similar complaint in the training set
         most_similar_complaint_train_query = self.df_train.iloc[most_similar_index_query]
@@ -283,7 +284,7 @@ if __name__ == "__main__":
     df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
               'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
-
+    retrive_top_n_docs = 5
     # set the target column to be the "CDESCR" column
     traget_col = "CDESCR"
     state_encode = "COMPDESC_StateEncoded"
@@ -308,7 +309,7 @@ if __name__ == "__main__":
 
     print(complaint_test_query)
     # find the most similar complaint to the complaint test
-    most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query)
+    most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query, retrive_top_n_docs)
     # print the most similar complaint with the below columns
     print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
     print(most_similar_complaint["CDESCR"])
