@@ -2,75 +2,23 @@
 from Text_Query import *
 import streamlit as st
 
+n = 20
+# create a list from 1 to 15
+desired_top_complaints = list(range(1, n))
+
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
 # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
-df_complaints = pd.read_csv(
-    "C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt",
-    sep="\t",
-    header=None,
-    index_col=0,
-)
-df_complaints.columns = [
-    "ODINO",
-    "MFR_NAME",
-    "MAKETXT",
-    "MODELTXT",
-    "YEARTXT",
-    "CRASH",
-    "FAILDATE",
-    "FIRE",
-    "INJURED",
-    "DEATHS",
-    "COMPDESC",
-    "CITY",
-    "STATE",
-    "VIN",
-    "DATEA",
-    "LDATE",
-    "MILES",
-    "OCCURENCES",
-    "CDESCR",
-    "CMPL_TYPE",
-    "POLICE_RPT_YN",
-    "PURCH_DT",
-    "ORIG_OWNER_YN",
-    "ANTI_BRAKES_YN",
-    "CRUISE_CONT_YN",
-    "NUM_CYLS",
-    "DRIVE_TRAIN",
-    "FUEL_SYS",
-    "FUEL_TYPE",
-    "TRANS_TYPE",
-    "VEH_SPEED",
-    "DOT",
-    "TIRE_SIZE",
-    "LOC_OF_TIRE",
-    "TIRE_FAIL_TYPE",
-    "ORIG_EQUIP_YN",
-    "MANUF_DT",
-    "SEAT_TYPE",
-    "RESTRAINT_TYPE",
-    "DEALER_NAME",
-    "DEALER_TEL",
-    "DEALER_CITY",
-    "DEALER_STATE",
-    "DEALER_ZIP",
-    "PROD_TYPE",
-    "REPAIRED_YN",
-    "MEDICAL_ATTN",
-    "VEHICLES_TOWED_YN",
-]
+df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
+df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
+            'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
+
 
 # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(
-    df_complaints["COMPDESC"]
-)
+df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
 
 
 # create a list of unique manufacturers in the "MFR_NAME" column
 list_of_manufacturers = df_complaints["MFR_NAME"].unique()
-
-# testing out the functionilzed code
 
 # call the TextClassifier class and create an instance of it as text_classifier
 # pass in the df_complaints dataframe and the "CDESCR" column
@@ -93,7 +41,10 @@ most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_q
 print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
 print(most_similar_complaint["CDESCR"])
 
-left_col, right_col = st.columns(2, gap="large")
+# set the page configuration to wide
+st.set_page_config(layout="wide")
+
+col_1, col_2 = st.columns(2)
 # Title of the web app
 st.sidebar.title("Complaint Finder")
 
@@ -102,35 +53,39 @@ complaint_query = st.sidebar.text_area("Enter a complaint:", "Battery dies after
 
 # Create a button for the user to click to find the most similar complaint
 if st.sidebar.button("Search and Classify"):
-    
+
     # find the most similar complaint to the complaint test
-    most_similar_complaint = text_classifier.find_similar_complaint(complaint_query)
+    most_similar_complaint = text_classifier.find_similar_complaint(complaint_query, n)
     # print the most similar complaint with the below columns make the text bold
-    left_col.header("Cosine Similarity")
-    left_col.subheader("Document Match:")
+    col_1.header("Cosine Similarity")
+    col_1.subheader("Document Match:")
+    # create a select box for the user to select a desired amount of top complaints to display
+    top_complaints_n = col_1.selectbox("Desired top complaints to display:", desired_top_complaints)
     # draw a line on the left column
-    left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
-    left_col.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"])
+    # only show the row of the top complaints that the user selected as top_complaints_n
+    col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[top_complaints_n-1])
+    #left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
+    col_1.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[top_complaints_n-1])
     # find the user input complaint classification
     cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
     # output the classification of the query to the right of the input text box
-    right_col.header("Kmeans Classification")
-    right_col.subheader("Prediction:")
-    right_col.write(cluster_kmeans_pred[0])
+    col_2.header("Kmeans")
+    col_2.subheader("Classification Prediction:")
+    col_2.write(cluster_kmeans_pred[0])
     # create a Matplotlib figure and axes
     fig1, ax1 = plt.subplots()
     kmeans_fig = text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1)
-    right_col.pyplot(kmeans_fig, use_container_width=True)
+    col_2.pyplot(kmeans_fig, use_container_width=True)
     # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
-    right_col.write("---")
-    right_col.header("Random Forest Classification")
-    right_col.subheader("Prediction:")
-    right_col.write(cluster_RFC_pred[0])
+    col_2.write("---")
+    col_2.header("Random Forest")
+    col_2.subheader("Classification Prediction:")
+    col_2.write(cluster_RFC_pred[0])
     # st.write("Classification of the query: ", query_classification)
     # Create a Matplotlib figure and axes
     fig2, ax2 = plt.subplots()
     RFC_fig = text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2)
-    right_col.pyplot(RFC_fig, use_container_width=True)
+    col_2.pyplot(RFC_fig, use_container_width=True)
 
 
 # run the streamlit app by running the below command in the terminal
