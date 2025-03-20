@@ -97,7 +97,7 @@ if st.sidebar.button("Search and Classify"):
     col_2.write(cluster_kmeans_pred[0])
     # create a Matplotlib figure and axes
     fig1, ax1 = plt.subplots()
-    kmeans_fig = text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1)
+    kmeans_fig = text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint.head(top_complaints_n))
     col_2.pyplot(kmeans_fig, use_container_width=True)
     # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
     col_2.write("---")
@@ -107,7 +107,7 @@ if st.sidebar.button("Search and Classify"):
     # st.write("Classification of the query: ", query_classification)
     # Create a Matplotlib figure and axes
     fig2, ax2 = plt.subplots()
-    RFC_fig = text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2)
+    RFC_fig = text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2, most_similar_complaint.head(top_complaints_n))
     col_2.pyplot(RFC_fig, use_container_width=True)
 
 

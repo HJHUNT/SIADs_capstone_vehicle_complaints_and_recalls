@@ -269,7 +269,7 @@ class TextClassifier:
         ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels, cmap='viridis', s=2, label="Training Text in Vectorized Space")
         # plot blue dots for the most similar complaints to the query text
         #ax.scatter(most_similar_complaint_df['CDESCR_CLEANED'][:, 0], most_similar_complaint_df['CDESCR_CLEANED'][:, 1], color="blue", label="Most Similar Complaints to Query Text")
-        ax.scatter(most_similar_complaint[self.column_name_cleaned_vect], color="blue", label="Most Similar Complaints to Query Text")
+        sns.scatterplot(x=most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0]), y=most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1]), color="blue", label="Most Similar Complaints to Query Text")
         # print a red spot for where the query text is
         #plt.scatter(X_pca_query[:, 0], X_pca_query[:, 1], color="red", label="Query Text")
         ax.scatter(query_vectorized[:, 0], query_vectorized[:, 1], color="red", label="Query Text in Vectorized Space")
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
               'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
-    retrive_top_n_docs = 5
+    retrive_top_n_docs = 10
     # set the target column to be the "CDESCR" column
     traget_col = "CDESCR"
     state_encode = "COMPDESC_StateEncoded"
@@ -335,6 +335,10 @@ if __name__ == "__main__":
     print(f"Silhouette Score for KMeans: {silhouette_score_kmeans}")
     silhouette_score_RFC = silhouette_score(text_classifier.complaints_vectorized_train, text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train))
     print(f"Silhouette Score for Random Forest Classifier: {silhouette_score_RFC}")
+
+    # pickel the most similar complaint
+    with open(text_classifier.desired_save_path + "//" + "most_similar_complaint.pkl", "wb") as f:
+        pickle.dump(most_similar_complaint, f)
 
     # create a Matplotlib figure and axes
     fig1, ax1 = plt.subplots()
