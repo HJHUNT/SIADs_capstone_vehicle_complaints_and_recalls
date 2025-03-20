@@ -32,14 +32,14 @@ text_classifier.fit_kmeans("COMPDESC_StateEncoded")
 # complaint_test_query = text_classifier.df_test["CDESCR"].iloc[5]
 # complaint_test_query = text_classifier.df_test["CDESCR"].iloc[4]
 # complaint_test_query = "Car won't start and makes a clicking noise"
-complaint_test_query = "Battery dies after a few days of not driving the car"
+default_complaint_test_query = "Battery dies after a few days of not driving the car"
 
-print(complaint_test_query)
+#print(complaint_test_query)
 # find the most similar complaint to the complaint test
-most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query)
+#most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query)
 # print the most similar complaint with the below columns
-print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
-print(most_similar_complaint["CDESCR"])
+#print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
+#print(most_similar_complaint["CDESCR"])
 
 # set the page configuration to wide
 st.set_page_config(layout="wide")
@@ -49,7 +49,10 @@ col_1, col_2 = st.columns(2)
 st.sidebar.title("Complaint Finder")
 
 # Create a text box for the user to input a complaint
-complaint_query = st.sidebar.text_area("Enter a complaint:", "Battery dies after a few days of not driving the car")
+complaint_query = st.sidebar.text_area("Enter a complaint:", default_complaint_test_query)
+
+# create a select box for the user to select a desired amount of top complaints to display
+top_complaints_n = st.sidebar.selectbox("Desired top complaints to display:", desired_top_complaints)
 
 # Create a button for the user to click to find the most similar complaint
 if st.sidebar.button("Search and Classify"):
@@ -59,13 +62,33 @@ if st.sidebar.button("Search and Classify"):
     # print the most similar complaint with the below columns make the text bold
     col_1.header("Cosine Similarity")
     col_1.subheader("Document Match:")
-    # create a select box for the user to select a desired amount of top complaints to display
-    top_complaints_n = col_1.selectbox("Desired top complaints to display:", desired_top_complaints)
+
     # draw a line on the left column
     # only show the row of the top complaints that the user selected as top_complaints_n
-    col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[top_complaints_n-1])
+    #col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[0])#top_complaints_n-1])
     #left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
-    col_1.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[top_complaints_n-1])
+    #col_1.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[top_complaints_n-1])
+
+    # loop through the top_complaints_n and display the most similar complaints
+    for i in range(top_complaints_n):
+        # if i is the first complaint, then append the word Top similar doc
+        if i == 0 and top_complaints_n == 1:
+            col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[i])
+            col_1.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
+        else:
+            if i == 0:
+                expander = col_1.expander("Doc " + str(i+1) + " - Top similar")
+            # elif i is the last complaint, then append the word Least similar doc
+            elif i == top_complaints_n-1:
+                expander = col_1.expander("Doc " + str(i+1) + " - Least similar")
+            else:
+                expander = col_1.expander("Doc " + str(i+1))
+            expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[i])
+            expander.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
+    #expander = col_1.expander("Doc 1")
+    #expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[0])
+    #expander.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[0])#top_complaints_n-1])
+    
     # find the user input complaint classification
     cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
     # output the classification of the query to the right of the input text box

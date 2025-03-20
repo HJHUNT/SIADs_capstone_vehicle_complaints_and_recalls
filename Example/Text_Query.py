@@ -42,6 +42,7 @@ class TextClassifier:
         self.df = df
         self.column_name = column_name
         self.column_name_cleaned = column_name + "_CLEANED"
+        self.column_name_cleaned_vect = column_name + "_CLEANED_VECT"
         # create variables to store the training, test, and validation sets for class functions
         self.df_train = None
         self.df_test = None
@@ -174,6 +175,7 @@ class TextClassifier:
 
         progress_bar.update(1)
 
+        self.df_train[self.column_name_cleaned_vect] = self.complaints_vectorized_train.tolist()
         # fit the label encoder on the training data
         self.label_encoder = LabelEncoder().fit(self.df_train["COMPDESC"])
         # create a pickle file for the label encoder
@@ -259,12 +261,15 @@ class TextClassifier:
         return self.cluster_kmeans_pred, self.cluster_RFC_pred, self.query_vectorized_lsa
         
     # Function to plot clusters
-    def plot_clusters(self, labels, title, query_vectorized,fig, ax):
+    def plot_clusters(self, labels, title, query_vectorized,fig, ax, most_similar_complaint_df):
         # Reduce dimensions of the vetrorized text to 2 for visualization
         X_pca = PCA(n_components=2).fit_transform(self.complaints_vectorized_train)
         # Reduce dimensions of the vetrorized text for the query text for visualization
         #X_pca_query = PCA(n_components=2).fit_transform(query_vectorized)
         ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels, cmap='viridis', s=2, label="Training Text in Vectorized Space")
+        # plot blue dots for the most similar complaints to the query text
+        #ax.scatter(most_similar_complaint_df['CDESCR_CLEANED'][:, 0], most_similar_complaint_df['CDESCR_CLEANED'][:, 1], color="blue", label="Most Similar Complaints to Query Text")
+        ax.scatter(most_similar_complaint[self.column_name_cleaned_vect], color="blue", label="Most Similar Complaints to Query Text")
         # print a red spot for where the query text is
         #plt.scatter(X_pca_query[:, 0], X_pca_query[:, 1], color="red", label="Query Text")
         ax.scatter(query_vectorized[:, 0], query_vectorized[:, 1], color="red", label="Query Text in Vectorized Space")
@@ -310,6 +315,8 @@ if __name__ == "__main__":
     print(complaint_test_query)
     # find the most similar complaint to the complaint test
     most_similar_complaint = text_classifier.find_similar_complaint(complaint_test_query, retrive_top_n_docs)
+    # print all the columns of the most similar complaint
+    print("here", most_similar_complaint[text_classifier.column_name_cleaned_vect].head())
     # print the most similar complaint with the below columns
     print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
     print(most_similar_complaint["CDESCR"])
@@ -332,11 +339,11 @@ if __name__ == "__main__":
     # create a Matplotlib figure and axes
     fig1, ax1 = plt.subplots()
     # plot the clusters of the training data for the KMeans model
-    text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1)
+    text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint)
     # create a Matplotlib figure and axes
     fig2, ax2 = plt.subplots()
     # plot the clusters of the training data for the Random Forest Classifier model
-    text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2)
+    text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2, most_similar_complaint)
 
     # plot the clusters of the training data for the KMeans model
     plt.show()
