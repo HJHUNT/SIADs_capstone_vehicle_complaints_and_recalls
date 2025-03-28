@@ -402,7 +402,6 @@ if __name__ == "__main__":
 
     # create a list of unique manufacturers in the "MFR_NAME" column
     # list_of_manufacturers = df_complaints["MFR_NAME"].unique()
-    # list_of_manufacturers = df_complaints["MFR_NAME"].unique()
 
     # call the TextClassifier class and create an instance of it as text_classifier
     # pass in the df_complaints dataframe and the "CDESCR" column
@@ -416,8 +415,7 @@ if __name__ == "__main__":
     complaint_test_query = "Battery dies after a few days of not driving the car"
     # complaint_test_query = "loss of power steering"
     #complaint_test_query = "Wheel sounds like it is scraping against something when driving"
-    # complaint_test_query = "loss of power steering"
-    #complaint_test_query = "Wheel sounds like it is scraping against something when driving"
+
 
     print(complaint_test_query)
     # find the most similar complaint to the complaint test
