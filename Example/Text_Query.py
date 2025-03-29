@@ -334,29 +334,29 @@ class TextClassifier:
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
         temp_df['query_vectorized_y'] = query_vectorized[:, 1]
-        temp_df['query_text'] = self.query_text
+        temp_df['Query Text'] = self.query_text
         # add the query text to the dataframe
 
         most_similar_complaint_df['x'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0])
         most_similar_complaint_df['y'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1])
 
-
+        # FF0000 is red
         most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
-            color=alt.Color("color:N", scale=alt.Scale(range=["FF0000"]), legend=alt.Legend(title="", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
-            fill=alt.value('red'),
+            color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value("#fd7f6f"),
             #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
             tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
         )
 
-        # create a Altaire chart for the query text
+        # create a Altaire chart for the query text "#0bb4ff" is light blue
         query = alt.Chart(temp_df).mark_point(size=125).transform_calculate(color='"Query Text"').encode(
             x=alt.X('query_vectorized_x', axis=None),
             y=alt.Y('query_vectorized_y',  axis=None),
-            color=alt.Color("color:N", scale=alt.Scale(range=["FFFFFF"]), legend=alt.Legend(title="Query Text", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
-            fill=alt.value('white'),
-            tooltip=['query_text']
+            color=alt.Color("color:N", scale=alt.Scale(range=["#0bb4ff"]), legend=alt.Legend(title="Query Text", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value("#0bb4ff"),
+            tooltip=['Query Text']
         )
 
         # Create an Altair chart for the cluster of the training data

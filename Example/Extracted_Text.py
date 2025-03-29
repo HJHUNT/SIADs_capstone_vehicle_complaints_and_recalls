@@ -15,7 +15,7 @@ from scipy.io.wavfile import write
 import wavio as wv
 
 
-def text_to_wav(text, output_file="Output/output.wav", rate=150, volume=1.0):
+def text_to_wav(text, output_file, rate=150, volume=1.0):
     """Converts text to a WAV audio file.
 
     Args:
@@ -59,7 +59,7 @@ def wav_to_text_and_tokenize(wav_file_path):
     try:
         audio = AudioSegment.from_wav(wav_file_path)  # load the wav file
         chunks = split_on_silence(
-            audio, min_silence_len=700, silence_thresh=-40
+            audio, min_silence_len=100, silence_thresh=-5
         )  # Adjust parameters as needed
         all_text = ""
 
@@ -91,11 +91,13 @@ def wav_to_text_and_tokenize(wav_file_path):
         return None
 
 
-def record_audio(output_file, duration=5, freq=44100):
+def record_audio(output_file, duration=5, freq=441000):
 
     # Start recorder with the given values
     # of duration and sample frequency
     recording = sd.rec(int(duration * freq), samplerate=freq, channels=2)
+
+    #print(recording)
 
     # Record audio for the given number of seconds
     sd.wait()

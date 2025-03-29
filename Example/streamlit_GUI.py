@@ -2,6 +2,7 @@
 from Text_Query import *
 from Extracted_Text import wav_to_text_and_tokenize
 from Extracted_Text import record_audio
+from speech_rec import *
 import streamlit as st
 
 n = 25
@@ -60,12 +61,16 @@ left_col, right_col = st.columns(2)
 # Title of the web app
 st.sidebar.title("Complaint Finder")
 
-# put a push button that records a wav audio file and passes it to the audio_to_text python script that uses the wav_to_text_and_tokenize function
-if st.sidebar.button("Record Audio", key="record_audio", help="Click to record audio complaint"):
-    # record the audio and save it to a wav file
-    output_wav_filename = "Output/complaint.wav"  # You can change the file name
-    record_audio(output_wav_filename)
-
+audio_value = st.sidebar.audio_input("Record a voice query")
+if audio_value:
+    #st.audio(audio_value)
+    # Convert audio to text
+    extracted_text = audio_to_text(audio_value)
+    print("Extracted Text:")
+    print(extracted_text)
+    # Display the extracted text in the sidebar
+    #st.sidebar.write("Extracted Text:", extracted_text)
+    default_complaint_test_query = extracted_text
 
 # Create a text box for the user to input a complaint
 complaint_query = st.sidebar.text_area("Enter a complaint:", default_complaint_test_query)
