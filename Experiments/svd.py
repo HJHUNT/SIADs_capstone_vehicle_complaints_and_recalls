@@ -1,4 +1,5 @@
 # create a streamlit app that allows users to input a text query and get the top 5 most similar documents from the corpus using the TextClassifier class from import os
+import json
 import os
 import pickle
 import pandas as pd
@@ -89,23 +90,19 @@ class TextClassifier:
 
         return pickles
     
-    def process_dataframe(self, train_size=0.7, test_size=0.2, validation_size=0.1, subgroup=""):
+    def process_dataframe(self, train_size=0.7, test_size=0.2, validation_size=0.1, subgroup=None):
         """
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
         """
-        basename = (
-            f"{self.column_name}_{self.num_dimensions}",
-            f"tfidf_{str(self.n_gram_range)}_min_df_{self.min_df}"
-            f"max_df_{self.max_df}_binary_{self.binary}"
-        ).join("_")
-        # get current working directory
-        cwd = os.getcwd()
-        # change the Example folder to Datasets folder in the cwd path
-        desired_save_path = os.path.join(self.dataset_dir, subgroup)
-        # desired_save_path = cwd + "\\Datasets"
-        # create a folder path to save the pickle files
+        # define experiment subdirectory
+        subdirectory = subgroup or f"svd_{self.column_name}_{self.num_dimensions}"
+        basename = f"{self.column_name}"
+        desired_save_path = os.path.join(self.dataset_dir, subdirectory)
         if not os.path.exists(desired_save_path):
             os.makedirs(desired_save_path)
+        
+        # desired_save_path = cwd + "\\Datasets"
+        # create a folder path to save the pickle files
 
         # check to see if there is a pickle file for the dataframe with the processed text
         if os.path.exists(desired_save_path + '//' + basename + "_df.pkl"):
@@ -122,6 +119,10 @@ class TextClassifier:
         # split the df_complaints dataframe into a test, train, and validation set with a 70/20/10 split
         self.df_train, self.df_test = train_test_split(self.df, test_size=(1-train_size), random_state=self.random_state)
         self.df_test, self.df_validation = train_test_split(self.df_test, test_size=(validation_size/(1-train_size)), random_state=self.random_state)
+
+        self.df_train.reset_index(drop=True, inplace=True)
+        self.df_validation.reset_index(drop=True, inplace=True)
+        self.df_test.reset_index(drop=True, inplace=True)
 
         # check to see if there is a pickle file for the vectorizer
         if (
@@ -175,15 +176,28 @@ class TextClassifier:
             self.complaints_vectorized_validation = self.lsa.transform(self.x_validation_vect)
             
             # create a pickle file for the vectorized training data
-            with open(desired_save_path + '//' + self.column_name + "_lsa.pkl", "wb") as f:
+            with open(desired_save_path + '//' + basename + "_lsa.pkl", "wb") as f:
                 pickle.dump(self.lsa, f)
-            with open(desired_save_path + '//' + self.column_name + "_complaints_vectorized_train.pkl", "wb") as f:
+            with open(desired_save_path + '//' + basename + "_complaints_vectorized_train.pkl", "wb") as f:
                 pickle.dump(self.complaints_vectorized_train, f)
-            with open(desired_save_path + '//' + self.column_name + "_complaints_vectorized_test.pkl", "wb") as f:
+            with open(desired_save_path + '//' + basename + "_complaints_vectorized_test.pkl", "wb") as f:
                 pickle.dump(self.complaints_vectorized_test, f)
-            with open(desired_save_path + '//' + self.column_name + "_complaints_vectorized_validation.pkl", "wb") as f:
+            with open(desired_save_path + '//' + basename + "_complaints_vectorized_validation.pkl", "wb") as f:
                 pickle.dump(self.complaints_vectorized_validation, f)
-
+        
+        # Save metadata
+        with open(f"{desired_save_path}/metadata.json", mode="w") as f:
+            json.dump(
+                {
+                    "dimension" : self.num_dimensions,
+                    "tfidf_ngram_range" : self.n_gram_range,
+                    "min_df" : self.min_df,
+                    "max_df" : self.max_df,
+                    "binary" : self.binary
+                },
+                f,
+                indent=4
+            )
         return self.df, self.df_train, self.df_test, self.df_validation, self.lsa, self.vectorizer
     
     # A functionalize the process of finding similar complaints to a query text
@@ -212,6 +226,11 @@ class TextClassifier:
                                         "validation",
                                         "test"    
                                     ] = "train",
+                                    keep : Literal[
+                                        "complaint",
+                                        "recall",
+                                        "all"
+                                    ] = "all",
                                     similarity_fn=cosine_similarity,
                                     top=5):
         """
@@ -225,19 +244,26 @@ class TextClassifier:
         query_vectorized_lsa = self.lsa.transform(query_vectorized)
         # find the cosine similarity between the query vector and all the complaints in the training set
         
-        if dataset_to_check == "train":
+        if keep == "recall":
+            filter_number = 0
+        elif keep == "complaint":
+            filter_number = 1
+        else:
+            filter_number = None
+    
+        if keep == "all":
+            indices = self.df_train.index
             cosine_similarities_query = similarity_fn(query_vectorized_lsa, self.complaints_vectorized_train)
-        elif dataset_to_check == "validation":
-            cosine_similarities_query = similarity_fn(query_vectorized_lsa, self.complaints_vectorized_validation)
-        elif dataset_to_check == "test":
-            cosine_similarities_query = similarity_fn(query_vectorized_lsa, self.complaints_vectorized_test)
+        else:
+            indices = self.df_train.loc[self.df_train["IS_COMPLAINT"] == filter_number].index
+            cosine_similarities_query = similarity_fn(query_vectorized_lsa, self.complaints_vectorized_train[indices])
     
         # get the index of the most similar complaints
         most_similar_indices_query = cosine_similarities_query.squeeze().argsort()[:-top-1:-1]
 
         # get the most similar complaints
-        most_similar_elements = self.df_train.iloc[most_similar_indices_query]
-        most_similar_elements["cosine_similarities"] = cosine_similarities_query.squeeze()[most_similar_indices_query]
+        most_similar_elements = self.df_train.loc[indices].iloc[most_similar_indices_query]
+        most_similar_elements["similarity"] = cosine_similarities_query.squeeze()[most_similar_indices_query]
         return most_similar_elements
     
     def run_training_pipeline(self, subgroup=""):

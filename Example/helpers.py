@@ -37,14 +37,21 @@ def trim_strings(df : pd.DataFrame):
 
 def generate_word_frequencies_from_column(df : pd.DataFrame, column : str):
     # Find all words in the column
+    df = df.copy()
     df = df.drop_duplicates(subset=[column])
 
     # Tokenize words into array of words and explode array
     all_words = df[column].str.findall("\\b\\w\\w+\\b").explode(column)
     all_words = all_words.str.lower()
+    all_words.reset_index(inplace=True)
 
     # Get word counts. We have column in column string for word and column 'count' for frequency 
-    word_frequencies = all_words.value_counts().reset_index()
+    word_frequencies = all_words.groupby(column)["index"].nunique().reset_index()
+    word_frequencies.rename(
+        {
+            "index" : "count"
+        }, axis=1
+    )
     
     # stemmer = PorterStemmer()
 
