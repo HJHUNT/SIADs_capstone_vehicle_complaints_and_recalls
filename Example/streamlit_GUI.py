@@ -16,21 +16,25 @@ df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINT
 df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
             'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
-
-# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
-
-
 # create a list of unique manufacturers in the "MFR_NAME" column
-list_of_manufacturers = df_complaints["MFR_NAME"].unique()
+#list_of_manufacturers = df_complaints["MFR_NAME"].unique()
 
 # call the TextClassifier class and create an instance of it as text_classifier
 # pass in the df_complaints dataframe and the "CDESCR" column
 text_classifier = TextClassifier(df_complaints, "CDESCR")
+
+#state_encode = "COMPDESC_CONDENSED_StateEncoded"
+# call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
+#compdesc_list_condensed, compdesc_dict = text_classifier.condense_component_description(df_complaints, "COMPDESC")
+# use the compdesc_dict to look up "COMPDESC" against the keys of the dict and assign the value to a new column in the dataframe called "COMPDESC_CONDENSED"
+#df_complaints["COMPDESC_CONDENSED"] = df_complaints["COMPDESC"].apply(lambda x: compdesc_dict.get(x))
+# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+#df_complaints["COMPDESC_CONDENSED_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC_CONDENSED"])
+
 # process the text in the "CDESCR" column
 text_classifier.process_dataframe()
 # fit a KMeans model to the training data
-text_classifier.fit_kmeans("COMPDESC_StateEncoded")
+text_classifier.fit_kmeans(text_classifier.compdesc_condensed_state_encoded)
 
 # use one of the complaints in the test set as a query to find the most similar complaint in the training set
 # complaint_test_query = text_classifier.df_test["CDESCR"].iloc[5]
@@ -54,9 +58,9 @@ default_complaint_test_query = "Battery dies after a few days of not driving the
 st.set_page_config(layout="wide", page_title="Complaint Finder", page_icon="🚗", initial_sidebar_state="expanded")
 
 
-col_1, col_2 = st.columns(2)
+#col_1, col_2 = st.columns(2)
 
-left_col, right_col = st.columns(2)
+#left_col, right_col = st.columns(2)
 
 # Title of the web app
 st.sidebar.title("Complaint Finder")
