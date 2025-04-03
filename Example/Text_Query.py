@@ -60,7 +60,7 @@ class TextClassifier:
         self.random_state = 42
         # create a TfidfVectorizer object
         self.vectorizer = TfidfVectorizer()
-        self.desired_clusters = len(self.compdesc_list_condensed)
+        self.desired_clusters = len(self.df[self.compdesc_condensed].unique())
         self.classifier_kmeans = KMeans(n_clusters=self.desired_clusters, random_state=self.random_state, n_init=100, max_iter=1000)
         self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
 
@@ -325,6 +325,17 @@ class TextClassifier:
         self.df_train['labels_num'] = labels
         #self.df_train['labels_words'] = self.label_encoder.inverse_transform(labels)
         self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
+        # copy the self.df_train to a new dataframe called filtered_df and only keep entries that equal the predicted cluster
+        cluster_df = self.df_train.copy()
+        no_cluster_df = self.df_train.copy()
+        if "KMeans" in title:
+            cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_kmeans_pred[0]]
+            no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_kmeans_pred[0]]
+        elif "Random Forest Classifier" in title:
+            cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_RFC_pred[0]]
+            no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_RFC_pred[0]]
+        else:
+            return None
 
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
@@ -358,17 +369,28 @@ class TextClassifier:
 
         # Create an Altair chart for the cluster of the training data
         # lable should say "cluster" in the legend
-        PCA_cluster = alt.Chart(self.df_train).mark_point(size=75).encode(
+        PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='viridis'),legend=alt.Legend(columns=6, title="Clusters", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="Clusters", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
-        ).properties(title=title, width=900, height=900)#.interactive()
+        ).properties(title=title, width=500, height=500)#.interactive()
+
+        # Create an Altair chart for the cluster of the training data
+        # lable should say "cluster" in the legend
+        PCA_cluster = alt.Chart(cluster_df).mark_point(size=75).encode(
+            x=alt.X('x_pca_train_data', axis=None),
+            y=alt.Y('y_pca_train_data', axis=None),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            # fill the points in with the scale color
+            fill=alt.value("#77DD77"),
+            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
+        ).properties(title=title, width=500, height=500)#.interactive()
 
         #chart = PCA_cluster + query + most_sim 
 
         # use alt.layer() to create a layered chart
-        chart = alt.layer(query, most_sim, PCA_cluster).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+        chart = alt.layer(query, most_sim, PCA_no_cluster, PCA_cluster).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
         #.configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
 
         #chart.configure(background='#FFFFFF') 
