@@ -35,28 +35,40 @@ if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
 class TextClassifier:
     def __init__(self, df, column_name: str):
         # set the random state for reproducibility
-        self.random_state = 42
-        # create a TfidfVectorizer object
-        self.vectorizer = TfidfVectorizer()
-        self.classifier_kmeans = KMeans(
-            n_clusters=150, random_state=self.random_state, n_init=100, max_iter=1000
-        )
-        self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
-        self.classifier_kmeans = KMeans(
-            n_clusters=150, random_state=self.random_state, n_init=100, max_iter=1000
-        )
-        self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
         # set the number of dimensions to reduce the vectorized data to
         self.num_dimensions = 384  # medium number of dimensions for better performance
         self.df = df
+        self.compdesc = "COMPDESC"
+        self.compdesc_state_encoded = self.compdesc + "_StateEncoded"
+        self.compdesc_condensed = self.compdesc + "_CONDENSED"
+        self.compdesc_condensed_state_encoded = self.compdesc_condensed + "_StateEncoded"
         # fit the label encoder on the training data
-        self.label_encoder = LabelEncoder().fit(self.df["COMPDESC"])
+        #self.label_encoder = LabelEncoder().fit(self.df[self.compdesc])
+        # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+        #self.df[self.compdesc_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc])
+        
+
+        # call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
+        self.compdesc_list_condensed, self.compdesc_dict = self.condense_component_description(self.df, self.compdesc)
+        # use the compdesc_dict to look up "COMPDESC" against the keys of the dict and assign the value to a new column in the dataframe called "COMPDESC_CONDENSED"
+        self.df[self.compdesc_condensed] = self.df[self.compdesc].apply(lambda x: self.compdesc_dict.get(x))
+        # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+        self.label_condensed_encoder = LabelEncoder().fit(self.df[self.compdesc_condensed])
+        self.df[self.compdesc_condensed_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc_condensed])
+        
+        # model parameters
+        self.random_state = 42
+        # create a TfidfVectorizer object
+        self.vectorizer = TfidfVectorizer()
+        self.desired_clusters = len(self.df[self.compdesc_condensed].unique())
+        self.classifier_kmeans = KMeans(n_clusters=self.desired_clusters, random_state=self.random_state, n_init=100, max_iter=1000)
+        self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
+
         # # create a pickle file for the label encoder
         #with open(self.desired_save_path + "//" + self.column_name + "_label_encoder.pkl", "wb") as f:
         #     pickle.dump(self.label_encoder, f)
         self.column_name = column_name
         self.column_name_cleaned = column_name + "_CLEANED"
-        self.column_name_cleaned_vect = column_name + "_CLEANED_VECT"
         self.column_name_cleaned_vect = column_name + "_CLEANED_VECT"
         # create variables to store the training, test, and validation sets for class functions
         self.df_train = None
@@ -106,22 +118,12 @@ class TextClassifier:
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
         """
         start_time = time.time()
-        total_steps = 5
-        progress_bar = tqdm(total=total_steps, desc="Processing DataFrame", unit="step")
-
-        start_time = time.time()
-        total_steps = 5
+        total_steps = 4
         progress_bar = tqdm(total=total_steps, desc="Processing DataFrame", unit="step")
 
         # create a folder path to save the pickle files
         if not os.path.exists(self.desired_save_path):
             os.makedirs(self.desired_save_path)
-
-        progress_bar.update(1)
-        if not os.path.exists(self.desired_save_path):
-            os.makedirs(self.desired_save_path)
-
-        progress_bar.update(1)
 
         # check to see if there is a pickle file for the dataframe with the processed text
         if os.path.exists(self.desired_save_path + "//" + self.column_name + "_df.pkl"):
@@ -137,11 +139,6 @@ class TextClassifier:
 
         progress_bar.update(1)
 
-        # split the df_complaints dataframe into a test, train, and validation set with a 70/20/10 split
-        self.df_train, self.df_test = train_test_split(self.df, test_size=(1 - train_size), random_state=self.random_state)
-        self.df_test, self.df_validation = train_test_split(self.df_test, test_size=(validation_size / (1 - train_size)), random_state=self.random_state)
-
-        progress_bar.update(1)
         self.df_train, self.df_test = train_test_split(self.df, test_size=(1 - train_size), random_state=self.random_state)
         self.df_test, self.df_validation = train_test_split(self.df_test, test_size=(validation_size / (1 - train_size)), random_state=self.random_state)
 
@@ -194,10 +191,7 @@ class TextClassifier:
             self.complaints_vectorized_train = self.lsa.fit_transform(self.x_train_vect)
             self.complaints_vectorized_test = self.lsa.transform(self.x_test_vect)
             self.complaints_vectorized_validation = self.lsa.transform(self.x_validation_vect)
-
-
             # create a pickle file for the vectorized training data
-            
             with open(self.desired_save_path + "//" + self.column_name + "_lsa.pkl", "wb") as f:
                 pickle.dump(self.lsa, f)
             with open(self.desired_save_path + "//" + self.column_name + "_complaints_vectorized_train.pkl", "wb") as f:
@@ -229,6 +223,7 @@ class TextClassifier:
         """
         Find the most similar complaint to a query text in the training set
         """
+        self.rank_count = top_n
         # process the query text
         query_text_cleaned = TextClassifier.process_text(query_text)
         # vectorize the query text
@@ -243,6 +238,8 @@ class TextClassifier:
         print(most_similar_index_query)
         # get the most similar complaint in the training set
         most_similar_complaint_train_query = self.df_train.iloc[most_similar_index_query]
+        # keep track of the top to decrease the rank count of the most similar complaints add this as a column to the datafram
+        most_similar_complaint_train_query["rank"] = range(1, top_n + 1)
         return most_similar_complaint_train_query
 
     # A functionalized process for fitting a kmeans model to the training data
@@ -274,6 +271,7 @@ class TextClassifier:
         """
         Predict the cluster of a query text
         """
+        self.query_text = query_text
         # process the query text
         query_text_cleaned = TextClassifier.process_text(query_text)
         # vectorize the query text
@@ -285,11 +283,13 @@ class TextClassifier:
         # predict the Random Forest Classifier cluster of the query text
         cluster_RFC = self.classifier_RFC.predict(self.query_vectorized_lsa)
         # convert the kmenas predicted cluster value back to the original value from the "COMPDESC" column
-        self.cluster_kmeans_pred = self.label_encoder.inverse_transform(cluster_kmeans)
+        #self.cluster_kmeans_pred = self.label_encoder.inverse_transform(cluster_kmeans)
+        self.cluster_kmeans_pred = self.label_condensed_encoder.inverse_transform(cluster_kmeans)
         
         #(LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_kmeans))
         # convert the Random Forest Classifier predicted cluster value back to the original value from the "COMPDESC" column
-        self.cluster_RFC_pred = self.label_encoder.inverse_transform(cluster_RFC)
+        #self.cluster_RFC_pred = self.label_encoder.inverse_transform(cluster_RFC)
+        self.cluster_RFC_pred = self.label_condensed_encoder.inverse_transform(cluster_RFC)
         #(LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_RFC))
         # return the predicted cluster
         return self.cluster_kmeans_pred, self.cluster_RFC_pred, self.query_vectorized_lsa
@@ -323,43 +323,137 @@ class TextClassifier:
         self.df_train['x_pca_train_data'] = pca_train_data[:, 0]
         self.df_train['y_pca_train_data'] = pca_train_data[:, 1]
         self.df_train['labels_num'] = labels
-        self.df_train['labels_words'] = self.label_encoder.inverse_transform(labels)
+        #self.df_train['labels_words'] = self.label_encoder.inverse_transform(labels)
+        self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
+        # copy the self.df_train to a new dataframe called filtered_df and only keep entries that equal the predicted cluster
+        cluster_df = self.df_train.copy()
+        no_cluster_df = self.df_train.copy()
+        if "KMeans" in title:
+            cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_kmeans_pred[0]]
+            no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_kmeans_pred[0]]
+        elif "Random Forest Classifier" in title:
+            cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_RFC_pred[0]]
+            no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_RFC_pred[0]]
+        else:
+            return None
 
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
         temp_df['query_vectorized_y'] = query_vectorized[:, 1]
+        temp_df['Query Text'] = self.query_text
+        # add the query text to the dataframe
 
         most_similar_complaint_df['x'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0])
         most_similar_complaint_df['y'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1])
 
-        most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125, color='red', fill = "red").encode(
+        #
+
+        # FF0000 is red
+        most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
-            tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC']#, 'CDESCR']
+            color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value("#fd7f6f"),
+            #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
+            tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
         )
 
-        # create a Altaire chart for the query text
-        query = alt.Chart(temp_df).mark_point(size=125, color='black', fill = "black").encode(
+        # create a Altaire chart for the query text "#0bb4ff" is light blue
+        query = alt.Chart(temp_df).mark_point(size=125).transform_calculate(color='"Query Text"').encode(
             x=alt.X('query_vectorized_x', axis=None),
             y=alt.Y('query_vectorized_y',  axis=None),
+            color=alt.Color("color:N", scale=alt.Scale(range=["#0bb4ff"]), legend=alt.Legend(title="Query Text", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value("#0bb4ff"),
+            tooltip=['Query Text']
         )
 
         # Create an Altair chart for the cluster of the training data
         # lable should say "cluster" in the legend
-        PCA_cluster = alt.Chart(self.df_train).mark_point(size=75).encode(
+        PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='viridis'),legend=alt.Legend(columns=5, title="Cluster", symbolLimit=0)),#, orient="bottom")),
-            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC']#, 'CDESCR']
-        ).properties(title=title, width=700, height=700)#.interactive()
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="Clusters", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
+        ).properties(title=title, width=500, height=500)#.interactive()
 
-        chart = PCA_cluster + query + most_sim 
+        # Create an Altair chart for the cluster of the training data
+        # lable should say "cluster" in the legend
+        PCA_cluster = alt.Chart(cluster_df).mark_point(size=75).encode(
+            x=alt.X('x_pca_train_data', axis=None),
+            y=alt.Y('y_pca_train_data', axis=None),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            # fill the points in with the scale color
+            fill=alt.value("#77DD77"),
+            tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
+        ).properties(title=title, width=500, height=500)#.interactive()
 
-        chart.configure(background='#FFFFFF') 
+        #chart = PCA_cluster + query + most_sim 
+
+        # use alt.layer() to create a layered chart
+        chart = alt.layer(query, most_sim, PCA_no_cluster, PCA_cluster).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+        #.configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+
+        #chart.configure(background='#FFFFFF') 
     
         #chart.save('filename.html')
 
         return chart
+    
+    def condense_component_description(self, df, column_name):
+        """
+        Condense the component description in the dataframe by removing any text after a colon or slash
+        """
+        # get the unique values in the column
+        compdesc_list = df[column_name].unique()
+
+        # condense the compdesc_list with common text like the main text using regex like ELECTRICAL SYSTEM, there are multiple instances of this in the list with : separators and other text
+        compdesc_list_condensed = []
+        compdesc_dict = {}
+
+        # loop through the compdesc_list and check to see if there is a : or / in the text
+        for text in compdesc_list:
+            # check to see if ther is a : in the text
+            if ":" in text:
+                # split the words on the : and / separator and then loop through the words
+                temp = text.split(":")[0]
+                words = temp.split(r'/')
+                # loop through the temp list and append the words to the compdesc_list_condensed list
+                for word in words:
+                    # check to see if the word is not empty and not a number
+                    compdesc_list_condensed.append(word)
+                    compdesc_dict[text] = word
+            elif r'/' in text:
+                # split the words on the : and / separator and then loop through the words
+                words = text.split(r'/')
+                # loop through the temp list and append the words to the compdesc_list_condensed list
+                for word in words:
+                    # check to see if the word is not empty and not a number
+                    compdesc_list_condensed.append(word)
+                    compdesc_dict[text] = word
+            else:
+                # append the text to the list
+                compdesc_list_condensed.append(text)
+                compdesc_dict[text] = text
+                
+        # remove duplicates from the list
+        compdesc_list_condensed = list(set(compdesc_list_condensed))
+
+        # return the condensed list and the dictionary
+        return compdesc_list_condensed, compdesc_dict
+    
+    def get_keys_from_value(dictionary, target_value):
+        for key, value in dictionary.items():
+            # check to see if the value is a string and if it contains the target_value
+            if isinstance(value, str):
+                if value in target_value:
+                    return key
+            else:
+                # check to see if the value is a number and if it is equal to the target_value
+                if target_value == value:
+                    return key
+                else:
+                    pass
+            return target_value
 
 
 # run the below code if main script
@@ -378,13 +472,26 @@ if __name__ == "__main__":
     # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
     df_complaints[state_encode] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
 
+    # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+    df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
+
     # create a list of unique manufacturers in the "MFR_NAME" column
-    # list_of_manufacturers = df_complaints["MFR_NAME"].unique()
     # list_of_manufacturers = df_complaints["MFR_NAME"].unique()
 
     # call the TextClassifier class and create an instance of it as text_classifier
     # pass in the df_complaints dataframe and the "CDESCR" column
     text_classifier = TextClassifier(df_complaints, traget_col)
+
+
+    state_encode = "COMPDESC_CONDENSED_StateEncoded"
+    # call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
+    compdesc_list_condensed, compdesc_dict = text_classifier.condense_component_description(df_complaints, "COMPDESC")
+    # use the compdesc_dict to look up "COMPDESC" against the keys of the dict and assign the value to a new column in the dataframe called "COMPDESC_CONDENSED"
+    df_complaints["COMPDESC_CONDENSED"] = df_complaints["COMPDESC"].apply(lambda x: compdesc_dict.get(x))
+    # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+    df_complaints["COMPDESC_CONDENSED_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC_CONDENSED"])
+
+
     # process the text in the "CDESCR" column
     text_classifier.process_dataframe()
     # fit a KMeans model to the training data
@@ -394,8 +501,7 @@ if __name__ == "__main__":
     complaint_test_query = "Battery dies after a few days of not driving the car"
     # complaint_test_query = "loss of power steering"
     #complaint_test_query = "Wheel sounds like it is scraping against something when driving"
-    # complaint_test_query = "loss of power steering"
-    #complaint_test_query = "Wheel sounds like it is scraping against something when driving"
+
 
     print(complaint_test_query)
     # find the most similar complaint to the complaint test
@@ -407,6 +513,8 @@ if __name__ == "__main__":
     print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
     print(most_similar_complaint["CDESCR"])
     # predict the cluster of the query text
+    #print(text_classifier.compdesc_list_condensed)
+    print(text_classifier.desired_clusters)
     cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_test_query)
     print(cluster_kmeans_pred)
     print(cluster_RFC_pred)
@@ -427,9 +535,9 @@ if __name__ == "__main__":
     #    pickle.dump(most_similar_complaint, f)
 
     # create a Matplotlib figure and axes
-    #fig1, ax1 = plt.subplots()
+    fig1, ax1 = plt.subplots()
     # plot the clusters of the training data for the KMeans model
-    #text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint)
+    text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint)
     # create a Matplotlib figure and axes
     #fig2, ax2 = plt.subplots()
     # plot the clusters of the training data for the Random Forest Classifier model
