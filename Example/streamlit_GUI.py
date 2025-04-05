@@ -157,20 +157,22 @@ if st.sidebar.button("Search and Classify"):
     kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred
     RFC_pred_tab_text = "Random Forest Cluster " + RFC_pred
 
-    tab1, tab2 = st.tabs([kmeans_pred_tab_text, RFC_pred_tab_text])
+    tab1, tab2 = st.tabs([RFC_pred_tab_text, kmeans_pred_tab_text])
 
     with tab1:
+        st.header("Random Forest")
+        st.write(RFC_pred)
+        # Use the native Altair theme.
+        RFC_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
+        st.altair_chart(RFC_fig, use_container_width=None, theme=None, selection_mode=None)
+
+    with tab2:
         st.subheader("Kmeans")
         st.write(kmeans_pred)
         # This is the default. So you can also omit the theme argument.
         kmeans_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
         #col_2.altair_chart(kmeans_fig, use_container_width=False)
         st.altair_chart(kmeans_fig, use_container_width=None, theme=None, selection_mode=None)
-    with tab2:
-        st.header("Random Forest")
-        st.write(RFC_pred)
-        # Use the native Altair theme.
-        RFC_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
-        st.altair_chart(RFC_fig, use_container_width=None, theme=None, selection_mode=None)
+        
 # run the streamlit app by running the below command in the terminal
 # streamlit run streamlit_GUI.py
