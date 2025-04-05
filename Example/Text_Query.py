@@ -113,7 +113,7 @@ class TextClassifier:
         return content_cleaned
 
 
-    def process_dataframe(self, train_size=0.7, test_size=0.2, validation_size=0.1):
+    def process_dataframe(self, train_size=0.9, test_size=0.05, validation_size=0.05):
         """
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
         """
@@ -352,7 +352,7 @@ class TextClassifier:
         most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
-            color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="Document Search", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
             fill=alt.value("#fd7f6f"),
             #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
             tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
@@ -372,7 +372,7 @@ class TextClassifier:
         PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="Clusters", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Cluster Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
         ).properties(title=title, width=500, height=500)#.interactive()
 
@@ -390,7 +390,7 @@ class TextClassifier:
         #chart = PCA_cluster + query + most_sim 
 
         # use alt.layer() to create a layered chart
-        chart = alt.layer(query, most_sim, PCA_no_cluster, PCA_cluster).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
+        chart = alt.layer(PCA_no_cluster, PCA_cluster, most_sim, query).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
         #.configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
 
         #chart.configure(background='#FFFFFF') 
