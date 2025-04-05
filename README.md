@@ -28,7 +28,7 @@ python -m pip freeze > requirements.txt
 ## Step 2: Running the Streamlit
 Run the below command in a power shell terminal to launch the streamlit application.
 ```
-(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\Example\streamlit_GUI.py'
+(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\src\streamlit_GUI.py'
 ```
 To stop the python streamlit app
 ```
