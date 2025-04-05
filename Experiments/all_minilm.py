@@ -2,116 +2,119 @@ from sentence_transformers import SentenceTransformer
 import torch
 from typing import Union, Literal
 import os
-import re
-import pickle
 import pandas as pd
+import sys
+curdir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(curdir)
+sys.path.insert(0, parent_dir)
+from helpers.utilities import get_dataset_dir
+from helpers.pickle_decorator import pickle_io
 # import numpy as np
 
 class HuggingFaceClassifier:
-    def __init__(self, dataset_path, model_name, column_name,
+    def __init__(self, model_name, column_name,
+                 experiment_name,
                 #  embedding_path=None,
                  similarity_fn_name : Union[
                             "cosine", "dot"
-                ] = "cosine"):
+                ] = "cosine",
+                rerun=False):
         self.column_name = column_name
         self.model_name = model_name
-        self.dataset_path = os.path.abspath(dataset_path)
-        dataset_dir, basename = self.dataset_path.rsplit(
-            os.sep, maxsplit=1
-        )
-        self.df = pd.read_csv(self.dataset_path)
+        self.rerun = rerun
+        self.experiment_name = experiment_name
+        self.dataset_dir = get_dataset_dir()
 
         # embeddings and models saved here
-        self.model_path = os.path.join(dataset_dir, f"huggingface", self.column_name)
+        self.model_dir = os.path.join(self.dataset_dir, f"huggingface", self.column_name)
 
         # Load sentence transformer if it has already been saved
-        if os.path.exists(os.path.join(self.model_path, self.model_name)):
-            self.model = SentenceTransformer(os.path.join(self.model_path, self.model_name),
+        if os.path.exists(os.path.join(self.model_dir, self.model_name)):
+            self.model = SentenceTransformer(os.path.join(self.model_dir, self.model_name),
                                              similarity_fn_name=similarity_fn_name)
         else:
-            os.makedirs(self.model_path, exist_ok=True)
+            os.makedirs(self.model_dir, exist_ok=True)
             self.model = SentenceTransformer(self.model_name,
                                              similarity_fn_name=similarity_fn_name)
-            self.model.save(os.path.join(self.model_path, self.model_name))
-
-    def split_text_by_period(text, max_length=200):
-        '''
-            Chunking not in use currently.
-        '''
-        sentences = re.split(r'\.\s+', text)  # Split by period + space
-        chunks = []
-        current_chunk = ""
-
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) < max_length:
-                current_chunk += sentence + ". "
-            else:
-                current_chunk += sentence + "."
-                chunks.append(current_chunk.strip())
-                current_chunk = "" # Reset current chunk
-
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-
-        return chunks
-
-    def dataset_processing(self):
-        '''
-            Not Used Yet
-        '''
-        self.df[self.column_name + "_CLEANED"] = (
-            self.df[self.column_name]
-            .apply(lambda x: self.split_text_by_period(x))
-        )
-        self.df = self.df[
-            ["index", self.column_name + "_CLEANED"]
-        ].explode(self.column_name + "_CLEANED")
-
-    def encode_embeddings(self):
+            self.model.save(os.path.join(self.model_dir, self.model_name))
+    
+    def fit_transform(self, series, experiment_name):
         '''
         TODO: Consider GPU acceleration
         '''
-        
-        # Put preprocessing Here
-
         # Encoding here
-        if not os.path.exists(self.model_path):
-            os.makedirs(self.model_path)
-            # Load model, dataframe, and encode text.
-            self.embeddings = self.model.encode(self.df[self.column_name], show_progress_bar=True)
-            with open(os.path.join(self.model_path, f"{self.model_name}-embeddings.pkl"), "wb") as f:
-                pickle.dump(self.embeddings, f)
-        else:
-            print("Embeddings found. Loading embeddings.")
-            with open(os.path.join(self.model_path, f"{self.model_name}-embeddings.pkl"), "rb") as f:
-                self.embeddings = pickle.load(f)
+        return pickle_io(
+            self.model.encode(series, show_progress_bar=True),
+            file_path=os.path.join(self.model_dir, experiment_name, f"{experiment_name}.pkl"),
+            rerun=self.rerun
+        )
     
-    def query_embeddings(self, query, 
+    def transform(self, series, experiment_name):
+        '''
+        TODO: Consider GPU acceleration
+        '''
+        # Encoding here
+        return pickle_io(
+            self.model.encode(series, show_progress_bar=True),
+            file_path=os.path.join(self.model_dir, experiment_name, f"{experiment_name}.pkl"),
+            rerun=self.rerun
+        )
+    
+    def find_similar(self, df, query, embeddings,
                          keep : Literal[
                             "complaint",
                             "recall",
                             "all"
                         ] = "all", top=20):
+        '''
+            Find most similar recalls, complaints or both
+        '''
         query_embedding = self.model.encode(query)
         if keep == "recall":
-            filter_indices = self.df[self.df["IS_COMPLAINT"] == 0].index
+            filter_indices = df[df["IS_COMPLAINT"] == 0].index
         elif keep == "complaint":
-            filter_indices = self.df[self.df["IS_COMPLAINT"] == 1].index
+            filter_indices = df[df["IS_COMPLAINT"] == 1].index
         else:
-            filter_indices = self.df.index
+            filter_indices = df.index
 
         model_similarities = self.model.similarity(
             query_embedding,
-            self.embeddings[filter_indices]
+            embeddings[filter_indices]
         )
         values, most_similar_indices = torch.topk(model_similarities, largest=True, k=top, dim=1)
-        docs_to_return = self.df.loc[filter_indices].iloc[most_similar_indices[0].tolist()]
+        docs_to_return = df.loc[filter_indices].iloc[most_similar_indices[0].tolist()]
         docs_to_return["similarity"] = values.squeeze()
         return docs_to_return
+    # def split_text_by_period(text, max_length=200):
+    #     '''
+    #         Chunking not in use currently.
+    #     '''
+    #     sentences = re.split(r'\.\s+', text)  # Split by period + space
+    #     chunks = []
+    #     current_chunk = ""
 
-    def run_training_pipeline(self):
-        '''
-            Technically no training is done.
-            Strictly speaking, this is simply a processing pipeline
-        '''
-        self.encode_embeddings()
+    #     for sentence in sentences:
+    #         if len(current_chunk) + len(sentence) < max_length:
+    #             current_chunk += sentence + ". "
+    #         else:
+    #             current_chunk += sentence + "."
+    #             chunks.append(current_chunk.strip())
+    #             current_chunk = "" # Reset current chunk
+
+    #     if current_chunk:
+    #         chunks.append(current_chunk.strip())
+
+    #     return chunks
+
+    # def dataset_processing(self):
+    #     '''
+    #         Not Used Yet
+    #     '''
+    #     self.read_dataset()
+    #     self.df[self.column_name + "_CLEANED"] = (
+    #         self.df[self.column_name]
+    #         .apply(lambda x: self.split_text_by_period(x))
+    #     )
+    #     self.df = self.df[
+    #         ["index", self.column_name + "_CLEANED"]
+    #     ].explode(self.column_name + "_CLEANED")
