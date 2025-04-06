@@ -340,6 +340,8 @@ class TextClassifier:
             no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_RFC_pred[0]]
         else:
             return None
+        
+        title = "Vector Space Graph"
 
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
@@ -366,7 +368,7 @@ class TextClassifier:
         query = alt.Chart(temp_df).mark_point(size=125).transform_calculate(color='"Query Text"').encode(
             x=alt.X('query_vectorized_x', axis=None),
             y=alt.Y('query_vectorized_y',  axis=None),
-            color=alt.Color("color:N", scale=alt.Scale(range=["#0bb4ff"]), legend=alt.Legend(title="Query Text", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            color=alt.Color("color:N", scale=alt.Scale(range=["#0bb4ff"]), legend=alt.Legend(title="User Entered", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
             fill=alt.value("#0bb4ff"),
             tooltip=['Query Text']
         )
@@ -376,20 +378,21 @@ class TextClassifier:
         PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Cluster Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Component Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
         ).properties(title=title, width=500, height=500)#.interactive()
 
         # Create an Altair chart for the cluster of the training data
         # lable should say "cluster" in the legend
         PCA_cluster = alt.Chart(cluster_df).mark_point(size=75).encode(
-            x=alt.X('x_pca_train_data', axis=None),
-            y=alt.Y('y_pca_train_data', axis=None),
+            x=alt.X('x_pca_train_data', axis=None, title='X-axis'),
+            y=alt.Y('y_pca_train_data', axis=None, title='Y-axis'),
             color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
             # fill the points in with the scale color
             fill=alt.value("#77DD77"),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
         ).properties(title=title, width=500, height=500)#.interactive()
+                     #title, width=500, height=500)#.interactive()
 
         #chart = PCA_cluster + query + most_sim 
 
