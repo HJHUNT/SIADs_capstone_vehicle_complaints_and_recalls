@@ -6,16 +6,12 @@ from src.speech_rec import *
 import streamlit as st
 import sys
 import os
-
-# goes back directories to import the helpers module
-curdir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(curdir)
-sys.path.insert(0, parent_dir)
+from sklearn.linear_model import SGDClassifier
 from helpers.utilities import get_dataset_dir
+from Experiments.preprocessing import Preprocesser
+from Experiments.classifier import Classifier
 
 DATASET_DIR = get_dataset_dir()
-df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
-
 n = 25
 # create a list from 1 to 15
 desired_top_complaints = list(range(1, n))
@@ -23,13 +19,10 @@ desired_top_complaints = list(range(1, n))
 
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
 # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
-#df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
-# works 4/5
-# df_complaints = pd.read_csv(r'C:\Repo\SIADs_Audio_Text_SRS\Datasets\test_agg.csv')
 
-#df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
-#            'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
-
+# df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
+#             'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
+df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 # create a list of unique manufacturers in the "MFR_NAME" column
 #list_of_manufacturers = df_complaints["MFR_NAME"].unique()
 
@@ -151,6 +144,87 @@ if st.sidebar.button("Search and Classify"):
     #fig1, ax1 = plt.subplots()
     #kmeans_fig = text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint.head(top_complaints_n))
     #col_2.pyplot(kmeans_fig, use_container_width=True)
+    recall_stopwords = ["crash", "risk", "increasing", "increase", "increases", "increased", "may", "could",
+    "injury", "equipment", "loss", "resulting", "condition", "occur", "result", "event", "labels", "possibly"]
+
+    complaint_stopwords = ["engine", "unknown", "car", "driving", "issue", "dealer", "failed", "problem",
+    "dealership", "issues", "times", "service", "back", "safety", "recall", "due", "like",
+    ]
+    p = Preprocesser(
+        "CDESCR_AND_COMPONENT",
+        csv_name="test_agg.csv",
+        custom_clean_name="nltk_stopwords_cdescr_and_components",
+        custom_vectorizer_name="tfidf_binary_unigram_bigram_cdescr_and_component",
+        extra_stopwords=recall_stopwords + complaint_stopwords,
+        vectorizer=TfidfVectorizer,
+        vectorizer_params=dict(
+            ngram_range=(1,2),
+            min_df=20,
+            max_df=0.7,
+            binary=True
+        ),
+        is_stem=True,
+        rerun=False
+    )
+    p.preprocess()
+    c = Classifier(
+        classifier=SGDClassifier,
+        classifier_params=dict(
+            random_state=42,
+            loss="log_loss"
+        ),
+        custom_classifier_name="lr_cdescr_and_components",
+        X_train = p.x_train_vect,
+        y_train = p.df_train["IS_RECALL"],
+        X_test = p.x_validation_vect,
+        y_test = p.df_validation["IS_RECALL"],
+        rerun=False
+    )
+    c.fit()
+    lr_prediction = c.predict(
+        complaint_query,
+        p.vectorizer,
+        p.process_text,
+        text_process_params=dict(
+            stopwords=set(stopwords.words("english")) | set(p.extra_stopwords),
+            is_stem=True
+        ),
+        is_proba=True
+    ).flatten()
+    lr_prediction = (lr_prediction * 100).round(2)
+    fig, ax = plt.subplots(figsize=(10, 1), dpi=100)
+    y = 0
+    ax.barh(y, lr_prediction[0], label="Probability of Complaint", color="#FFD700")
+    ax.barh(y, lr_prediction[1], left=lr_prediction[0], label="Probability of Recall", color="#FF0000")
+    ax.tick_params(axis="y", colors="none")
+    ax.tick_params(axis="x", colors="none")
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    x_ticks = [0, lr_prediction[0], 100]
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(["0%", f"{lr_prediction[0]}%", "100%"])
+    for i in range(2):
+        if i == 0 and x_ticks[i] < 7.5:
+            ax.text(x=x_ticks[i] + 2, y=0.8, s=f"{lr_prediction[i]}%", ha="left", va='center', color='black',
+                fontweight=600)
+        else:
+            ax.text(x=x_ticks[i] + 2, y=0, s=f"{lr_prediction[i]}%", ha="left", va='center', color='white',
+                fontweight=600)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.45, -0.9), ncols=2,
+              facecolor='none', framealpha=0.0)
+
+    # background_color = st.get_option("theme.backgroundColor")
+    # Set the figure background color to transparent
+    fig.patch.set_alpha(0.0)  # Makes the entire figure transparent
+    fig.patch.set_facecolor('none')  # Ensure it's transparent, not just white
+
+    # Set the axes background color to transparent
+    ax.set_facecolor('none')  # Makes the plot area transparent
+
+    st.header("Regression")
+    st.subheader("Classification of Complaint/Recall")
+    st.pyplot(fig)
 
     # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
     #col_2.write("---")
@@ -190,6 +264,13 @@ if st.sidebar.button("Search and Classify"):
         kmeans_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
         #col_2.altair_chart(kmeans_fig, use_container_width=False)
         st.altair_chart(kmeans_fig, use_container_width=None, theme=None, selection_mode=None)
-        
+    
+    recall_stopwords = ["crash", "risk", "increasing", "increase", "increases", "increased", "may", "could",
+    "injury", "equipment", "loss", "resulting", "condition", "occur", "result", "event", "labels", "possibly"]
+
+    complaint_stopwords = ["unknown", "car", "driving", "issue", "dealer", "failed", "problem",
+    "dealership", "issues", "times", "service", "back", "safety", "recall", "due", "like",
+    ]
+    
 # run the streamlit app by running the below command in the terminal
 # streamlit run streamlit_GUI.py
