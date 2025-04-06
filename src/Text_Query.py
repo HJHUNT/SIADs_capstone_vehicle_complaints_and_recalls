@@ -39,6 +39,7 @@ class TextClassifier:
         self.num_dimensions = 384  # medium number of dimensions for better performance
         self.df = df
         self.compdesc = "COMPDESC"
+        self.cdescr = "CDESCR"
         self.compdesc_state_encoded = self.compdesc + "_StateEncoded"
         self.compdesc_condensed = self.compdesc + "_CONDENSED"
         self.compdesc_condensed_state_encoded = self.compdesc_condensed + "_StateEncoded"
@@ -55,7 +56,10 @@ class TextClassifier:
         # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
         self.label_condensed_encoder = LabelEncoder().fit(self.df[self.compdesc_condensed])
         self.df[self.compdesc_condensed_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc_condensed])
-        
+        self.df.drop_duplicates([self.compdesc_condensed, self.cdescr], inplace=True)
+        print("Dataframe shape after dropping duplicates: ", self.df.shape)
+        print("Unique values in the condensed component description: ", len(self.df[self.compdesc_condensed].unique()))
+
         # model parameters
         self.random_state = 42
         # create a TfidfVectorizer object

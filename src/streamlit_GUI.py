@@ -4,6 +4,17 @@ from Extracted_Text import wav_to_text_and_tokenize
 from Extracted_Text import record_audio
 from speech_rec import *
 import streamlit as st
+import sys
+import os
+
+# goes back directories to import the helpers module
+curdir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(curdir)
+sys.path.insert(0, parent_dir)
+from helpers.utilities import get_dataset_dir
+
+DATASET_DIR = get_dataset_dir()
+df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 
 n = 25
 # create a list from 1 to 15
@@ -12,9 +23,12 @@ desired_top_complaints = list(range(1, n))
 
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
 # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
-df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
-df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
-            'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
+#df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
+# works 4/5
+# df_complaints = pd.read_csv(r'C:\Repo\SIADs_Audio_Text_SRS\Datasets\test_agg.csv')
+
+#df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
+#            'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
 # create a list of unique manufacturers in the "MFR_NAME" column
 #list_of_manufacturers = df_complaints["MFR_NAME"].unique()
@@ -106,7 +120,7 @@ if st.sidebar.button("Search and Classify"):
         if i == 0 and top_complaints_n == 1:
             #col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[i])
             #col_1.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
-            st.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[i])
+            st.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC","IS_COMPLAINT"]].iloc[i])
             st.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
         else:
             if i == 0:
@@ -119,7 +133,7 @@ if st.sidebar.button("Search and Classify"):
             else:
                 #expander = col_1.expander("Doc " + str(i+1))
                 expander = st.expander("Doc " + str(i+1))
-            expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[i])
+            expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC","IS_COMPLAINT"]].iloc[i])
             expander.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
     #expander = col_1.expander("Doc 1")
     #expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[0])
@@ -143,6 +157,9 @@ if st.sidebar.button("Search and Classify"):
     #col_2.header("Random Forest")
     #col_2.subheader("Classification Prediction:")
     #col_2.write(cluster_RFC_pred[0])
+    st.write("---")
+    st.header("Regression:")
+    st.write("Other stuff here")
     st.write("---")
     st.header("Classification:")
     # st.write("Classification of the query: ", query_classification)
