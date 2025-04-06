@@ -40,8 +40,7 @@ text_classifier = TextClassifier(df_complaints, "CDESCR")
 
 # process the text in the "CDESCR" column
 text_classifier.process_dataframe()
-# fit a KMeans model to the training data
-text_classifier.fit_kmeans(text_classifier.compdesc_condensed_state_encoded)
+
 
 # use one of the complaints in the test set as a query to find the most similar complaint in the training set
 # complaint_test_query = text_classifier.df_test["CDESCR"].iloc[5]
@@ -133,7 +132,8 @@ if st.sidebar.button("Search and Classify"):
     #expander.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[0])#top_complaints_n-1])
     
     # find the user input complaint classification
-    cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
+    # fit a KMeans model to the training data
+    
     # output the classification of the query to the right of the input text box
     #col_2.header("Kmeans")
     #col_2.subheader("Classification Prediction:")
@@ -221,6 +221,8 @@ if st.sidebar.button("Search and Classify"):
 
     # Set the axes background color to transparent
     ax.set_facecolor('none')  # Makes the plot area transparent
+    
+    st.write("---")
 
     st.header("Regression")
     st.subheader("Classification of Complaint/Recall")
@@ -232,9 +234,12 @@ if st.sidebar.button("Search and Classify"):
     #col_2.subheader("Classification Prediction:")
     #col_2.write(cluster_RFC_pred[0])
     st.write("---")
-    st.header("Regression:")
-    st.write("Other stuff here")
-    st.write("---")
+
+
+    ## Predict Cluster
+    text_classifier.fit_kmeans(text_classifier.compdesc_condensed_state_encoded)
+    cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
+
     st.header("Classification:")
     # st.write("Classification of the query: ", query_classification)
     # Create a Matplotlib figure and axes
@@ -242,7 +247,7 @@ if st.sidebar.button("Search and Classify"):
     #RFC_fig = text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2, most_similar_complaint.head(top_complaints_n))
     #col_2.pyplot(RFC_fig, use_container_width=True)
     #st.pyplot(RFC_fig, use_container_width=True)
-
+    
     kmeans_pred = "Prediction: " + cluster_kmeans_pred[0]
     RFC_pred = "Prediction: " + cluster_RFC_pred[0]
     kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred
