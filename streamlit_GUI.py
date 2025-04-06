@@ -1,8 +1,8 @@
 # import Text_Query.py to use the functions
-from Text_Query import *
-from Extracted_Text import wav_to_text_and_tokenize
-from Extracted_Text import record_audio
-from speech_rec import *
+from src.Text_Query import *
+from src.Extracted_Text import wav_to_text_and_tokenize
+from src.Extracted_Text import record_audio
+from src.speech_rec import *
 import streamlit as st
 import sys
 import os

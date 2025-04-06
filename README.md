@@ -25,10 +25,18 @@ When adding pip installs into the virtual enviroment the below command will upda
 ```
 python -m pip freeze > requirements.txt
 ```
-## Step 2: Running the Streamlit
+## Step 2: Download Data
+A sample dataset can be be downloaded from google dive, pending using a umich email address. There is an excel file that has recall and complaint data combined. There are also pickeld files which allow for running streamlit without having to  
+
+https://drive.google.com/drive/folders/1fmBg9eUN8n9z1pPNDqQU-YcLBESC86NF?usp=drive_link
+
+The NHTSA website is where the original datasets can be found and downloaded from, there are also APIs. There are option for different time spans.
+ 
+https://www.nhtsa.gov/nhtsa-datasets-and-apis#
+## Step 3: Running the Streamlit
 Run the below command in a power shell terminal to launch the streamlit application.
 ```
-(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\src\streamlit_GUI.py'
+(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\streamlit_GUI.py'
 ```
 To stop the python streamlit app
 ```
