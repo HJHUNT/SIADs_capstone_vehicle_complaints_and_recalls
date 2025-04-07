@@ -63,6 +63,4 @@ Run the below command in a power shell terminal to launch the streamlit applicat
 ```
 To stop the python streamlit app
 ```
-^C
-^C
 ```

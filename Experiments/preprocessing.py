@@ -2,7 +2,6 @@
 from sentence_transformers import SentenceTransformer
 from sklearn.conftest import fetch_rcv1_fxt
 from sklearn.feature_extraction.text import TfidfVectorizer
-from all_minilm import HuggingFaceClassifier
 from sklearn.model_selection import train_test_split
 from typing import Union
 import sys
@@ -13,8 +12,13 @@ import pickle
 import numpy as np
 
 import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
+try:
+    nltk.data.find('stopwords')
+    nltk.data.find('punkt')
+except LookupError:
+    nltk.download('stopwords')
+    nltk.download('punkt')
+
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 from nltk import word_tokenize
@@ -90,7 +94,7 @@ class Preprocesser:
         )
         self.df["CDESCR_AND_COMPONENT"] = np.where(
             self.df["IS_COMPLAINT"] == 1,
-            Preprocesser.str_cat(self.df, ["CDESCR", "COMPDESC"]),
+            Preprocesser.str_cat(self.df, ["CDESCR"]),
             Preprocesser.str_cat(self.df, ["CONSEQUENCE_DEFECT", "COMPDESC"])
         )
         return self.df
