@@ -10,12 +10,12 @@ This is a high level flow diagam showing the data flow for the project.
     ├── .streamlit                   # Settings for Streamlit (dependency for Streamlit)
     ├── Datasets                     # Ingested Files (gitignore)
     ├── env                          # Python Virtual Enviroment (gitignore)
-    ├── Experiments                  # 
-    ├── Exploration                  # 
-    ├── helpers                      # 
+    ├── Experiments                  # Python classes for rapid experimentation
+    ├── Exploration                  # Data exploration to gain new ideas on machine learning methods
+    ├── helpers                      # Utility functions such as wrapper functions for data pickling
     ├── Resources                    # Images for the README.md (dependency for README.md)    
     ├── src                          # Source files (`app` and imports for the streamlit_GUI.py)
-    ├── Test                         # 
+    ├── Test                         # Folder for impromptu tests
     ├── .gitignore
     ├── LICENSE
     ├── README.md
@@ -62,5 +62,3 @@ Run the below command in a power shell terminal to launch the streamlit applicat
 (env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\streamlit_GUI.py'
 ```
 To stop the python streamlit app
-```
-```
