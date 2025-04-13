@@ -23,6 +23,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import altair as alt
+import sys
+
 
 # check to see if the nltk data has been downloaded in the virtual environment
 if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
@@ -34,7 +36,6 @@ if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
 
 class TextClassifier:
     def __init__(self, df, column_name: str):
-        # set the random state for reproducibility
         # set the number of dimensions to reduce the vectorized data to
         self.num_dimensions = 384  # medium number of dimensions for better performance
         self.df = df
@@ -56,11 +57,13 @@ class TextClassifier:
         # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
         self.label_condensed_encoder = LabelEncoder().fit(self.df[self.compdesc_condensed])
         self.df[self.compdesc_condensed_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc_condensed])
+        # drop duplicates from the dataframe based on the "COMPDESC" and "CDESCR" columns
         self.df.drop_duplicates([self.compdesc_condensed, self.cdescr], inplace=True)
         print("Dataframe shape after dropping duplicates: ", self.df.shape)
         print("Unique values in the condensed component description: ", len(self.df[self.compdesc_condensed].unique()))
 
         # model parameters
+        # set the random state for reproducibility
         self.random_state = 42
         # create a TfidfVectorizer object
         self.vectorizer = TfidfVectorizer()
@@ -117,7 +120,7 @@ class TextClassifier:
         return content_cleaned
 
 
-    def process_dataframe(self, train_size=0.9, test_size=0.05, validation_size=0.05):
+    def process_dataframe(self, train_size=0.7, test_size=0.2, validation_size=0.1):
         """
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
         """
@@ -465,12 +468,23 @@ class TextClassifier:
 
 # run the below code if main script
 if __name__ == "__main__":
+    # change c:\Repo\SIADs_Audio_Text_SRS\src which is where the current script is to c:\Repo\SIADs_Audio_Text_SRS\ which is the root directory
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    print("Current working directory: ", os.getcwd())
+    # C:\Repo\SIADs_Audio_Text_SRS\streamlit_GUI.py
+    # cd to the helpers directory
+    sys.path.append(os.path.join(os.getcwd(), "helpers"))
+    from utilities import get_dataset_dir
+
+    DATASET_DIR = get_dataset_dir()
     # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
     # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
 
-    df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
-    df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
-              'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
+    #df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
+    #df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
+    #          'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
+
+    df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 
     retrive_top_n_docs = 10
     # set the target column to be the "CDESCR" column
@@ -517,7 +531,7 @@ if __name__ == "__main__":
     print("here", most_similar_complaint[text_classifier.column_name_cleaned_vect].head())
 
     # print the most similar complaint with the below columns
-    print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC"]])
+    print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC","IS_COMPLAINT"]])
     print(most_similar_complaint["CDESCR"])
     # predict the cluster of the query text
     #print(text_classifier.compdesc_list_condensed)

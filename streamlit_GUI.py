@@ -10,11 +10,13 @@ from sklearn.linear_model import SGDClassifier
 from helpers.utilities import get_dataset_dir
 from Experiments.preprocessing import Preprocesser
 from Experiments.classifier import Classifier
+print("Current working directory: ", os.getcwd())
 
 DATASET_DIR = get_dataset_dir()
 n = 25
 # create a list from 1 to 15
 desired_top_complaints = list(range(1, n))
+
 
 
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
@@ -105,6 +107,7 @@ if st.sidebar.button("Search and Classify"):
     #col_1.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]].iloc[0])#top_complaints_n-1])
     #left_col.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC"]])
     #col_1.write("DESCRIPTION OF THE COMPLAINT: " + most_similar_complaint["CDESCR"].iloc[top_complaints_n-1])
+    print(most_similar_complaint.columns)
 
     # loop through the top_complaints_n and display the most similar complaints
     for i in range(top_complaints_n):
