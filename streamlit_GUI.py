@@ -94,87 +94,11 @@ if st.sidebar.button("Search and Classify"):
             expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC","IS_COMPLAINT"]].iloc[i])
             expander.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
     
-    # create a list of stopwords from nltk.corpus.stopwords
-    recall_stopwords = ["crash", "risk", "increasing", "increase", "increases", "increased", "may", "could",
-    "injury", "equipment", "loss", "resulting", "condition", "occur", "result", "event", "labels", "possibly"]
-
-    complaint_stopwords = ["engine", "unknown", "car", "driving", "issue", "dealer", "failed", "problem",
-    "dealership", "issues", "times", "service", "back", "safety", "recall", "due", "like"]
-
-    # preprocess the data using the Preprocesser class
-    p = Preprocesser(
-        "CDESCR_AND_COMPONENT",
-        csv_name="test_agg.csv",
-        custom_clean_name="nltk_stopwords_cdescr_and_components",
-        custom_vectorizer_name="tfidf_binary_unigram_bigram_cdescr_and_component",
-        extra_stopwords=recall_stopwords + complaint_stopwords,
-        vectorizer=TfidfVectorizer,
-        vectorizer_params=dict(
-            ngram_range=(1,2),
-            min_df=20,
-            max_df=0.7,
-            binary=True
-        ),
-        is_stem=True,
-        rerun=False)
-    
-    p.preprocess()
-
-    c = Classifier(
-        classifier=SGDClassifier,
-        classifier_params=dict(
-            random_state=42,
-            loss="log_loss"
-        ),
-        custom_classifier_name="lr_cdescr_and_components",
-        X_train = p.x_train_vect,
-        y_train = p.df_train["IS_RECALL"],
-        X_test = p.x_validation_vect,
-        y_test = p.df_validation["IS_RECALL"],
-        rerun=False
-    )
-    c.fit()
-    lr_prediction = c.predict(
-        complaint_query,
-        p.vectorizer,
-        p.process_text,
-        text_process_params=dict(
-            stopwords=set(stopwords.words("english")) | set(p.extra_stopwords),
-            is_stem=True
-        ),
-        is_proba=True
-    ).flatten()
-
-    lr_prediction = (lr_prediction * 100).round(2)
-    fig, ax = plt.subplots(figsize=(10, 1), dpi=100)
-    y = 0
-    ax.barh(y, lr_prediction[0], label="Probability of Complaint", color="#FFD700")
-    ax.barh(y, lr_prediction[1], left=lr_prediction[0], label="Probability of Recall", color="#FF0000")
-    ax.tick_params(axis="y", colors="none")
-    ax.tick_params(axis="x", colors="none")
-    ax.spines["bottom"].set_visible(False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    x_ticks = [0, lr_prediction[0], 100]
-    ax.set_xticks(x_ticks)
-    ax.set_xticklabels(["0%", f"{lr_prediction[0]}%", "100%"])
-    for i in range(2):
-        if i == 0 and x_ticks[i] < 7.5:
-            ax.text(x=x_ticks[i] + 2, y=0.8, s=f"{lr_prediction[i]}%", ha="left", va='center', color='black', fontweight=600)
-        else:
-            ax.text(x=x_ticks[i] + 2, y=0, s=f"{lr_prediction[i]}%", ha="left", va='center', color='white', fontweight=600)
-    ax.legend(loc="lower center", bbox_to_anchor=(0.45, -0.9), ncols=2,facecolor='none', framealpha=0.0)
-
-    # Set the figure background color to transparent
-    fig.patch.set_alpha(0.0)  # Makes the entire figure transparent
-    fig.patch.set_facecolor('none')  # Ensure it's transparent, not just white
-
-    # Set the axes background color to transparent
-    ax.set_facecolor('none')  # Makes the plot area transparent
-    
     st.write("---")
     st.header("Regression")
     st.subheader("Classification of Complaint/Recall")
+    fig, ax = plt.subplots(figsize=(10, 1), dpi=100)
+    fig = text_classifier.plot_regression_bar_chart(complaint_query, fig, ax)
     st.pyplot(fig)
 
     # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
