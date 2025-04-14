@@ -44,11 +44,6 @@ class TextClassifier:
         self.compdesc_state_encoded = self.compdesc + "_StateEncoded"
         self.compdesc_condensed = self.compdesc + "_CONDENSED"
         self.compdesc_condensed_state_encoded = self.compdesc_condensed + "_StateEncoded"
-        # fit the label encoder on the training data
-        #self.label_encoder = LabelEncoder().fit(self.df[self.compdesc])
-        # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-        #self.df[self.compdesc_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc])
-        
 
         # call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
         self.compdesc_list_condensed, self.compdesc_dict = self.condense_component_description(self.df, self.compdesc)
