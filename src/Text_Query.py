@@ -36,7 +36,7 @@ if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
     download("punkt_tab")
 
 class TextClassifier:
-    def __init__(self, df, column_name: str):
+    def __init__(self, df, column_name: str="CDESCR"):
         # set the number of dimensions to reduce the vectorized data to
         self.num_dimensions = 384  # medium number of dimensions for better performance
         self.df = df
@@ -45,6 +45,11 @@ class TextClassifier:
         self.compdesc_state_encoded = self.compdesc + "_StateEncoded"
         self.compdesc_condensed = self.compdesc + "_CONDENSED"
         self.compdesc_condensed_state_encoded = self.compdesc_condensed + "_StateEncoded"
+
+        # state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+        self.compdesc_encoder = LabelEncoder().fit_transform(self.df[self.compdesc])
+        # create a new column in the dataframe called COMPDESC_StateEncoded
+        self.df[self.compdesc_state_encoded] = LabelEncoder().fit_transform(self.df[self.compdesc])
 
         # call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
         self.compdesc_list_condensed, self.compdesc_dict = self.condense_component_description(self.df, self.compdesc)
@@ -119,7 +124,7 @@ class TextClassifier:
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
         """
         start_time = time.time()
-        total_steps = 4
+        total_steps = 5
         progress_bar = tqdm(total=total_steps, desc="Processing DataFrame", unit="step")
 
         # create a folder path to save the pickle files
@@ -205,6 +210,10 @@ class TextClassifier:
         progress_bar.update(1)
 
         self.df_train[self.column_name_cleaned_vect] = self.complaints_vectorized_train.tolist()
+
+        
+        self.fit_kmeans(self.compdesc_condensed_state_encoded)
+        progress_bar.update(1) 
 
         progress_bar.close()
 
