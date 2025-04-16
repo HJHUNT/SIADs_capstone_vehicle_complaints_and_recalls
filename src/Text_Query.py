@@ -68,8 +68,6 @@ class TextClassifier:
         self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
 
         # # create a pickle file for the label encoder
-        #with open(self.desired_save_path + "//" + self.column_name + "_label_encoder.pkl", "wb") as f:
-        #     pickle.dump(self.label_encoder, f)
         self.column_name = column_name
         self.column_name_cleaned = column_name + "_CLEANED"
         self.column_name_cleaned_vect = column_name + "_CLEANED_VECT"
@@ -207,11 +205,6 @@ class TextClassifier:
         progress_bar.update(1)
 
         self.df_train[self.column_name_cleaned_vect] = self.complaints_vectorized_train.tolist()
-        # # fit the label encoder on the training data
-        # self.label_encoder = LabelEncoder().fit(self.df_train["COMPDESC"])
-        # # create a pickle file for the label encoder
-        # with open(self.desired_save_path + "//" + self.column_name + "_label_encoder.pkl", "wb") as f:
-        #     pickle.dump(self.label_encoder, f)
 
         progress_bar.close()
 
@@ -299,6 +292,9 @@ class TextClassifier:
         
     # Function to plot clusters
     def plot_clusters(self, labels, title, query_vectorized,fig, ax, most_similar_complaint_df):
+        '''
+        Plot clusters using matplotlib
+        '''
         # Reduce dimensions of the vetrorized text to 2 for visualization
         X_pca = PCA(n_components=2).fit_transform(self.complaints_vectorized_train)
         # Reduce dimensions of the vetrorized text for the query text for visualization
@@ -351,12 +347,14 @@ class TextClassifier:
         most_similar_complaint_df['x'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0])
         most_similar_complaint_df['y'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1])
 
-        # fd7f6f is light red
+        #
+
+        # FF0000 is red
         most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
-            color=alt.Color("color:N", scale=alt.Scale(range=["#fec89a"]), legend=alt.Legend(title="Document Search", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
-            fill=alt.value("#fec89a"),
+            color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="Document Search", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            fill=alt.value("#fd7f6f"),
             #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
             tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
         )

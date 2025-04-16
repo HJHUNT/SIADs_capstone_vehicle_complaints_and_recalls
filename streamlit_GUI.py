@@ -25,6 +25,33 @@ desired_top_complaints = list(range(1, n))
 
 df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 
+retrive_top_n_docs = 10
+# set the target column to be the "CDESCR" column
+traget_col = "CDESCR"
+state_encode = "COMPDESC_StateEncoded"
+# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+df_complaints[state_encode] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
+
+# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
+
+# create a list of unique manufacturers in the "MFR_NAME" column
+# list_of_manufacturers = df_complaints["MFR_NAME"].unique()
+
+# call the TextClassifier class and create an instance of it as text_classifier
+# pass in the df_complaints dataframe and the "CDESCR" column
+text_classifier = TextClassifier(df_complaints, traget_col)
+
+
+state_encode = "COMPDESC_CONDENSED_StateEncoded"
+# call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
+compdesc_list_condensed, compdesc_dict = text_classifier.condense_component_description(df_complaints, "COMPDESC")
+# use the compdesc_dict to look up "COMPDESC" against the keys of the dict and assign the value to a new column in the dataframe called "COMPDESC_CONDENSED"
+df_complaints["COMPDESC_CONDENSED"] = df_complaints["COMPDESC"].apply(lambda x: compdesc_dict.get(x))
+# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
+df_complaints["COMPDESC_CONDENSED_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC_CONDENSED"])
+
+
 # create a list of unique manufacturers in the "MFR_NAME" column
 #list_of_manufacturers = df_complaints["MFR_NAME"].unique()
 
@@ -35,6 +62,8 @@ text_classifier = TextClassifier(df_complaints, "CDESCR")
 # process the text in the "CDESCR" column
 text_classifier.process_dataframe()
 
+# fit a KMeans model to the training data
+text_classifier.fit_kmeans(state_encode)
 
 # use one of the complaints in the test set as a query to find the most similar complaint in the training set
 # complaint_test_query = text_classifier.df_test["CDESCR"].iloc[5]
@@ -117,15 +146,20 @@ if st.sidebar.button("Search and Classify"):
 
     tab1, tab2 = st.tabs([RFC_pred_tab_text, kmeans_pred_tab_text])
 
+    #kmeans_fig, RFC_fig = text_classifier.plot_scatter_plot_alt(query_vectorized, most_similar_complaint.head(top_complaints_n))
+
     with tab1:
         st.header("Random Forest")
         st.write(RFC_pred)
+        # Use the native Altair theme.
         RFC_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
         st.altair_chart(RFC_fig, use_container_width=None, theme=None, selection_mode=None)
 
     with tab2:
         st.subheader("Kmeans")
         st.write(kmeans_pred)
+        # This is the default. So you can also omit the theme argument.
         kmeans_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
+        #col_2.altair_chart(kmeans_fig, use_container_width=False)
         st.altair_chart(kmeans_fig, use_container_width=None, theme=None, selection_mode=None)
 
