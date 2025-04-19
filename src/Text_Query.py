@@ -365,7 +365,7 @@ class TextClassifier:
             color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="Document Search", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
             fill=alt.value("#fd7f6f"),
             #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
-            tooltip= ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR', 'rank']
+            tooltip= ["NHTSAs ID", "MANUFACTURER", "MAKE", "MODEL", "YEAR", "COMPONENT DESCRIPTION","ISSUE TYPE", 'rank']
         )
 
         # create a Altaire chart for the query text "#0bb4ff" is light blue

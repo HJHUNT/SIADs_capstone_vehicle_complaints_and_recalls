@@ -96,7 +96,15 @@ top_complaints_n = st.sidebar.selectbox("Desired top complaints to display:", de
 if st.sidebar.button("Search and Classify"):
 
     # find the most similar complaint to the complaint test
-    most_similar_complaint = text_classifier.find_similar_complaint(complaint_query, n)
+    df = text_classifier.find_similar_complaint(complaint_query, n)
+    # make a copy of the dataframe to use for the most similar complaint
+    most_similar_complaint = df.copy()
+    # change the name of the column "CDESCR" to "DESCRIPTION", MFR_NAME to "MANUFACTURER", MAKETXT to "MAKE", MODELTXT to "MODEL", YEARTXT to "YEAR", COMPDESC to "COMPONENT DESCRIPTION"
+    most_similar_complaint.rename(columns={"ODINO":"NHTSAs ID","CDESCR": "DESCRIPTION", "MFR_NAME": "MANUFACTURER", "MAKETXT": "MAKE", "MODELTXT": "MODEL", "YEARTXT": "YEAR", "COMPDESC": "COMPONENT DESCRIPTION","IS_COMPLAINT" : "ISSUE TYPE"}, inplace=True)
+    # change the values in the "ISSUE TYPE" column to be either "Complaint" or "Recall" true is complaint, false is recall
+    most_similar_complaint["ISSUE TYPE"] = most_similar_complaint["ISSUE TYPE"].replace({True: "Complaint", False: "Recall"})
+    # make the NHTSAs ID column be an integer with no decimal places when it is a string as a starting point ignore na values
+    most_similar_complaint["NHTSAs ID"] = most_similar_complaint["NHTSAs ID"].astype(str).str.replace(".0", "")
     # print the most similar complaint with the below columns make the text bold
     st.header("Document Match:")
     st.subheader("Cosine Similarity")
@@ -109,8 +117,8 @@ if st.sidebar.button("Search and Classify"):
     for i in range(top_complaints_n):
         # if i is the first complaint, then append the word Top similar doc
         if i == 0 and top_complaints_n == 1:
-            st.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC","IS_COMPLAINT"]].iloc[i])
-            st.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
+            st.write(most_similar_complaint[["NHTSAs ID", "MANUFACTURER", "MAKE", "MODEL", "YEAR", "COMPONENT DESCRIPTION","ISSUE TYPE"]].iloc[i])
+            st.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["DESCRIPTION"].iloc[i])
         else:
             # if i is the first complaint, then append the word Top similar doc
             if i == 0:
@@ -120,15 +128,15 @@ if st.sidebar.button("Search and Classify"):
                 expander = st.expander("Doc " + str(i+1) + " - Least similar")
             else:
                 expander = st.expander("Doc " + str(i+1))
-            expander.write(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "COMPDESC","IS_COMPLAINT"]].iloc[i])
-            expander.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["CDESCR"].iloc[i])
+            expander.write(most_similar_complaint[["NHTSAs ID", "MANUFACTURER", "MAKE", "MODEL", "YEAR", "COMPONENT DESCRIPTION","ISSUE TYPE"]].iloc[i])
+            expander.write("DESCRIPTION OF THE COMPLAINT: \n" + most_similar_complaint["DESCRIPTION"].iloc[i])
     
     st.write("---")
     st.header("Regression")
     st.subheader("Classification of Complaint/Recall")
     fig, ax = plt.subplots(figsize=(10, 1), dpi=100)
     fig = text_classifier.plot_regression_bar_chart(complaint_query, fig, ax)
-    st.pyplot(fig)
+    st.pyplot(fig,use_container_width=False)
 
     # inbed a plot with a cluster visualization onto the streamlit page by calling the plot_clusters methodright_col.pyplot(kmeans_fig)
     st.write("---")
