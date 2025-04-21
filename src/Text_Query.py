@@ -37,6 +37,12 @@ if not os.path.exists(os.path.join(os.path.expanduser("~"), "nltk_data")):
 
 class TextClassifier:
     def __init__(self, df, column_name: str="CDESCR"):
+        # creat a docstring for the class
+        """
+        A class to classify text data using KMeans and Random Forest Classifier
+        df: pandas dataframe
+        column_name: the name of the column in the dataframe to classify CDESCR is the default
+        """
         # set the number of dimensions to reduce the vectorized data to
         self.num_dimensions = 384  # medium number of dimensions for better performance
         self.df = df
@@ -95,6 +101,9 @@ class TextClassifier:
     def process_text(text):
         """
         Process text by tokenizing, removing stop words, and stemming
+        text: the text to process
+
+        return: a list of cleaned words
         """
         stop_words = set(stopwords.words("english"))
         stemmer = PorterStemmer()
@@ -119,9 +128,18 @@ class TextClassifier:
         return content_cleaned
 
 
-    def process_dataframe(self, train_size=0.7, test_size=0.2, validation_size=0.1):
+    def process_dataframe(self, train_size=0.8, test_size=0.1, validation_size=0.1):
         """
         Process the text in the "CDESCR" column and create a new column "CDESCR_CLEANED" with the processed text
+        the generated text will be saved to a pickle file in the desired_save_path folder
+        
+        A process bar will be shown to show the progress of the processing, this step will take the longest time to process the text
+
+        train_size: the size of the training set, default is 0.8
+        test_size: the size of the test set, default is 0.1
+        validation_size: the size of the validation set, default is 0.1
+
+        return: the processed dataframe, the training set, the test set, and the validation set
         """
         start_time = time.time()
         total_steps = 5
@@ -227,6 +245,10 @@ class TextClassifier:
     def find_similar_complaint(self, query_text: str, top_n=1):
         """
         Find the most similar complaint to a query text in the training set
+        query_text: the text to find similar complaints to
+        top_n: the number of similar complaints to find, default is 1
+
+        return: a dataframe of the most similar complaints to the query text
         """
         self.rank_count = top_n
         # process the query text
@@ -251,6 +273,9 @@ class TextClassifier:
     def fit_kmeans(self, col_name: str):
         """
         Fit a KMeans model to the training data
+        col_name: the name of the column in the dataframe to fit the model to, default is "COMPDESC_StateEncoded"
+
+        return: the fitted KMeans model
         """
         # check to see if there is a pickle file for the classifier
         if os.path.exists(self.desired_save_path + "//" + self.column_name + "_classifier_kmeans.pkl") and os.path.exists(self.desired_save_path + "//" + self.column_name + "_classifier_RFC.pkl"):
@@ -274,7 +299,13 @@ class TextClassifier:
     # predict the cluster off the query text
     def predict_cluster(self, query_text: str):
         """
-        Predict the cluster of a query text
+        Predict the cluster of a query text with the KMeans and Random Forest Classifier models
+        This function will also vectorize the query text and reduce the dimensionality of the vectorized text
+        It can take a while to process the text, so be patient
+
+        query_text: the text to predict the cluster for
+
+        return: the predicted cluster for the KMeans, the predicted cluster for Random Forest Classifier models, and the vectorized query text
         """
         self.query_text = query_text
         # process the query text
@@ -306,6 +337,17 @@ class TextClassifier:
     def plot_clusters(self, labels, title, query_vectorized,fig, ax, most_similar_complaint_df):
         '''
         Plot clusters using matplotlib
+        This function will plot the clusters of the training data and the query text in a 2D space using PCA
+        It is current not used on the streamlit page, but it is here for reference
+
+        labels: the labels of the clusters
+        title: the title of the plot
+        query_vectorized: the vectorized query text
+        fig: the figure to plot on
+        ax: the axis to plot on
+        most_similar_complaint_df: the dataframe of the most similar complaints to the query text
+
+        return: the figure of the plot
         '''
         # Reduce dimensions of the vetrorized text to 2 for visualization
         X_pca = PCA(n_components=2).fit_transform(self.complaints_vectorized_train)
@@ -327,38 +369,45 @@ class TextClassifier:
     
         # Function to plot clusters using Altair
     def plot_clusters_alt(self, labels, title, query_vectorized, most_similar_complaint_df):
+        '''
+        Plot clusters using Altair
+        This function will plot the clusters of the training data and the query text in a 2D space using PCA
+        This is used on the streamlit page
+
+        labels: the labels of the clusters
+        title: the title of the plot
+        query_vectorized: the vectorized query text
+        most_similar_complaint_df: the dataframe of the most similar complaints to the query text
+
+        return: the Altair chart of the plot
+        '''
         # Reduce dimensions of the vectorized text to 2 for visualization
         pca_train_data = PCA(n_components=2).fit_transform(self.complaints_vectorized_train)
-        #query_pca = PCA(n_components=2).fit_transform(query_vectorized.toarray())
 
+        # Reduce dimensions of the vectorized text for the query text for visualization
         self.df_train['x_pca_train_data'] = pca_train_data[:, 0]
         self.df_train['y_pca_train_data'] = pca_train_data[:, 1]
         self.df_train['labels_num'] = labels
-        #self.df_train['labels_words'] = self.label_encoder.inverse_transform(labels)
-        #self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
-        # copy the self.df_train to a new dataframe called filtered_df and only keep entries that equal the predicted cluster
-        #cluster_df = self.df_train.copy()
-        #no_cluster_df = self.df_train.copy()
+
         if "KMeans" in title:
+            # add the labels to the dataframe
             self.df_train['labels'] = labels
             cluster_df = self.df_train.copy()
             no_cluster_df = self.df_train.copy()
+            # filter the dataframe to only include the rows with the same label as the predicted cluster
             cluster_df = cluster_df[cluster_df['labels'] == self.cluster_kmeans_pred[0]]
             no_cluster_df = no_cluster_df[no_cluster_df['labels'] != self.cluster_kmeans_pred[0]]
             # add the word group in front of each of the label in the list labels and then assign it to the labels_words column
             # loop through the labels and add group in front of each of the label in the list labels
             cluster_df['labels_words'] = "Group " + cluster_df['labels'].astype(str)
-            # print out the most frequent component descriptions for the cluster_df on the column named "self.compdesc_condensed"
-            #print("Top ", cluster_df[self.compdesc_condensed].value_counts().head(1))
-            self.kmeans_predicted_most_common_compdesc = cluster_df[self.compdesc_condensed].value_counts().head(1).index[0]
-            self.kmeans_predicted_most_common_compdesc_count = cluster_df[self.compdesc_condensed].value_counts().head(1)[0]
-            print("Most common component description in the cluster: ", self.kmeans_predicted_most_common_compdesc)
+            self.kmeans_predicted_most_common_compdesc = cluster_df[self.compdesc_condensed].value_counts()
             no_cluster_df['labels_words'] = "Group " + no_cluster_df['labels'].astype(str)
-            #["Group " + str(label) for label in labels]
         elif "Random Forest Classifier" in title:
+            # add the labels to the dataframe
             self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
             cluster_df = self.df_train.copy()
             no_cluster_df = self.df_train.copy()
+            # filter the dataframe to only include the rows with the same label as the predicted cluster
             cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_RFC_pred[0]]
             no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_RFC_pred[0]]
         else:
@@ -366,24 +415,21 @@ class TextClassifier:
         
         title = "Vector Space Graph"
 
+        # create a new dataframe for the query vectorized data
         temp_df = pd.DataFrame()
         temp_df['query_vectorized_x'] = query_vectorized[:, 0]
         temp_df['query_vectorized_y'] = query_vectorized[:, 1]
         temp_df['Query Text'] = self.query_text
-        # add the query text to the dataframe
-
+        # create a new column in the dataframe for the query vectorized data
         most_similar_complaint_df['x'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[0])
         most_similar_complaint_df['y'] = most_similar_complaint_df['CDESCR_CLEANED_VECT'].apply(lambda x: x[1])
 
-        #
-
-        # FF0000 is red
+        # create a scatter plot for the most similar complaints to the query text and make the points orange with a hex code of #fd7f6f
         most_sim = alt.Chart(most_similar_complaint_df).mark_point(size=125).transform_calculate(color='"Most Similar Complaints"').encode(
             x=alt.X('x', axis=None),
             y=alt.Y('y', axis=None),
             color=alt.Color("color:N", scale=alt.Scale(range=["#fd7f6f"]), legend=alt.Legend(title="Document Search", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
             fill=alt.value("#fd7f6f"),
-            #color=alt.Color(legend=alt.Legend(title="Most Similar Complaints to Query Text", symbolLimit=0)),
             tooltip= ["NHTSAs ID", "MANUFACTURER", "MAKE", "MODEL", "YEAR", "COMPONENT DESCRIPTION","ISSUE TYPE", 'rank']
         )
 
@@ -396,35 +442,27 @@ class TextClassifier:
             tooltip=['Query Text']
         )
 
-        # Create an Altair chart for the cluster of the training data
-        # lable should say "cluster" in the legend
+        # Create a scatter plot with the training data clusters in different shades of grey exluding the cluster of the predicted group associated with the query text
         PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
             color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Component Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom"),type='ordinal'),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
-        ).properties(title=title, width=500, height=500)#.interactive()
+        ).properties(title=title, width=500, height=500)
 
-        # Create an Altair chart for the cluster of the training data
-        # lable should say "cluster" in the legend
+        # Create a scatter plot with the predicted cluster with green points with a hex code of #77DD77
         PCA_cluster = alt.Chart(cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None, title='X-axis'),
             y=alt.Y('y_pca_train_data', axis=None, title='Y-axis'),
             color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10),type='ordinal'),
-            # fill the points in with the scale color
             fill=alt.value("#77DD77"),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
-        ).properties(title=title, width=500, height=500)#.interactive()
-                     #title, width=500, height=500)#.interactive()
+        ).properties(title=title, width=500, height=500)
 
-        #chart = PCA_cluster + query + most_sim 
-
-        # use alt.layer() to create a layered chart
+        # combine the charts into one chart with a title and a legend    
         chart = alt.layer(PCA_no_cluster, PCA_cluster, most_sim, query).resolve_scale(color='independent').configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
-        #.configure_legend(titleFontSize=20, labelFontSize =18, gradientLength=400, gradientThickness=30, symbolSize = 130,)
 
-        #chart.configure(background='#FFFFFF') 
-    
+        # this line of code should be uncommented to save the chart as a html file when wanting to see the altair chart when running the .py file in the terminal   
         #chart.save('filename.html')
 
         return chart
@@ -432,6 +470,11 @@ class TextClassifier:
     def condense_component_description(self, df, column_name):
         """
         Condense the component description in the dataframe by removing any text after a colon or slash
+        df: the dataframe to condense the component description in
+        column_name: the name of the column in the dataframe to condense the component description in
+
+        Return: a list of the unique values in the column and a dictionary of the condensed values
+        The dictionary will have the original value as the key and the condensed value as the value
         """
         # get the unique values in the column
         compdesc_list = df[column_name].unique()
@@ -486,6 +529,12 @@ class TextClassifier:
             return target_value
         
     def get_text_processed_and_regression(self, complaint_query):
+        """
+        Get the text processed and regression for the complaint query
+        complaint_query: the text to process and predict the regression for
+
+        return: the prediction for the complaint query
+        """
         # create a list of stopwords from nltk.corpus.stopwords
         recall_stopwords = ["crash", "risk", "increasing", "increase", "increases", "increased", "may", "could",
         "injury", "equipment", "loss", "resulting", "condition", "occur", "result", "event", "labels", "possibly"]
@@ -541,6 +590,15 @@ class TextClassifier:
         return lr_prediction
     
     def plot_regression_bar_chart(self, complaint_query, fig, ax):
+        """
+        Plot a regression bar chart for the complaint query
+        complaint_query: the text to plot the regression bar chart for
+        fig: the figure to plot on
+        ax: the axis to plot on
+
+        return: the figure of the plot
+        """
+
         lr_prediction = self.get_text_processed_and_regression(complaint_query)
         # create a bar chart with the prediction values
         y = 0
@@ -588,7 +646,6 @@ if __name__ == "__main__":
     DATASET_DIR = get_dataset_dir()
     # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
     # read in C:\Repo\SIADs_Audio_Text_SRS\Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
-
     #df_complaints = pd.read_csv("C:\\Repo\\SIADs_Audio_Text_SRS\\Datasets\\COMPLAINTS_RECEIVED_2025-2025.txt", sep="\t", header=None, index_col=0)
     #df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
     #          'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
@@ -630,7 +687,7 @@ if __name__ == "__main__":
 
     # use one of the complaints in the test set as a query to find the most similar complaint in the training set
     complaint_test_query = "Battery dies after a few days of not driving the car"
-    # complaint_test_query = "loss of power steering"
+    #complaint_test_query = "loss of power steering"
     #complaint_test_query = "Wheel sounds like it is scraping against something when driving"
 
 
@@ -644,7 +701,6 @@ if __name__ == "__main__":
     print(most_similar_complaint[["ODINO", "MFR_NAME", "MAKETXT", "MODELTXT", "YEARTXT", "CDESCR", "COMPDESC","IS_COMPLAINT"]])
     print(most_similar_complaint["CDESCR"])
     # predict the cluster of the query text
-    #print(text_classifier.compdesc_list_condensed)
     print(text_classifier.desired_clusters)
     cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_test_query)
     print(cluster_kmeans_pred)
