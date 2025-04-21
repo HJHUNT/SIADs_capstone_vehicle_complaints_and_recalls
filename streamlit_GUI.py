@@ -13,62 +13,27 @@ from Experiments.classifier import Classifier
 print("Current working directory: ", os.getcwd())
 
 DATASET_DIR = get_dataset_dir()
+# set the desired top complaints to display to 25, this is the default value and can be increased or decreased by the user
 n = 25
 # create a list from 1 to 15
 desired_top_complaints = list(range(1, n))
 
 # https://www.nhtsa.gov/nhtsa-datasets-and-apis#recalls
 # read in os.getcwd() + Example\COMPLAINTS_RECEIVED_2025-2025.txt into a pandas dataframe, where the columns are RCL
-
 # df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
 #             'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
 df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 
-retrive_top_n_docs = 10
-# set the target column to be the "CDESCR" column
-#traget_col = "CDESCR"
-#state_encode = "COMPDESC_StateEncoded"
-# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-#df_complaints[state_encode] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
-
-# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-#df_complaints["COMPDESC_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC"])
-
-# create a list of unique manufacturers in the "MFR_NAME" column
-# list_of_manufacturers = df_complaints["MFR_NAME"].unique()
-
 # call the TextClassifier class and create an instance of it as text_classifier
-# pass in the df_complaints dataframe and the "CDESCR" column
 text_classifier = TextClassifier(df_complaints)
-
-
-#state_encode = "COMPDESC_CONDENSED_StateEncoded"
-# call the condense_component_description function to condense the component description in the dataframe by removing any text after a colon or slash
-#compdesc_list_condensed, compdesc_dict = text_classifier.condense_component_description(df_complaints, "COMPDESC")
-# use the compdesc_dict to look up "COMPDESC" against the keys of the dict and assign the value to a new column in the dataframe called "COMPDESC_CONDENSED"
-#df_complaints["COMPDESC_CONDENSED"] = df_complaints["COMPDESC"].apply(lambda x: compdesc_dict.get(x))
-# state encode the COMPDESC values and create a new column in the dataframe called COMPDESC_StateEncoded
-#df_complaints["COMPDESC_CONDENSED_StateEncoded"] = LabelEncoder().fit_transform(df_complaints["COMPDESC_CONDENSED"])
-
-
-# create a list of unique manufacturers in the "MFR_NAME" column
-#list_of_manufacturers = df_complaints["MFR_NAME"].unique()
-
-# call the TextClassifier class and create an instance of it as text_classifier
-# pass in the df_complaints dataframe and the "CDESCR" column
-#text_classifier = TextClassifier(df_complaints, "CDESCR")
 
 # process the text in the "CDESCR" column
 text_classifier.process_dataframe()
 
-# fit a KMeans model to the training data
-#text_classifier.fit_kmeans(state_encode)
 
 # use one of the complaints in the test set as a query to find the most similar complaint in the training set
-# complaint_test_query = text_classifier.df_test["CDESCR"].iloc[5]
-# complaint_test_query = text_classifier.df_test["CDESCR"].iloc[4]
-# complaint_test_query = "Car won't start and makes a clicking noise"
+# default_complaint_test_query = "Car won't start and makes a clicking noise"
 default_complaint_test_query = "Battery dies after a few days of not driving the car"
 
 # set the page configuration to wide and make it dark mode
@@ -153,13 +118,12 @@ if st.sidebar.button("Search and Classify"):
 
     kmeans_pred = "Prediction: Group " + str(cluster_kmeans_pred[0])
     RFC_pred = "Prediction: " + cluster_RFC_pred[0]
-    kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred + " -> Component Description: " + str(text_classifier.kmeans_predicted_most_common_compdesc) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc_count) + " occurrences"
-    kmeans_pred_tab_text_count = kmeans_pred + " -> The most frequent component description of this unsupervised group is: " + str(text_classifier.kmeans_predicted_most_common_compdesc) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc_count) + " occurrences"
+    #kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred + " -> Component Description: " + str(text_classifier.kmeans_predicted_most_common_compdesc.head(1).index[0]) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc.head(1)[0]) + " occurrences"
+    kmeans_pred_tab_text_count = kmeans_pred + " -> The most frequent component descriptions of this unsupervised group is: " + str(text_classifier.kmeans_predicted_most_common_compdesc.head(1).index[0]) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc.head(1)[0]) + " occurrences"
+    kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred_tab_text_count
     RFC_pred_tab_text = "Random Forest Cluster " + RFC_pred
 
     tab1, tab2 = st.tabs([RFC_pred_tab_text, kmeans_pred_tab_text])
-
-    #kmeans_fig, RFC_fig = text_classifier.plot_scatter_plot_alt(query_vectorized, most_similar_complaint.head(top_complaints_n))
 
     with tab1:
         st.header("Random Forest")
@@ -169,5 +133,13 @@ if st.sidebar.button("Search and Classify"):
     with tab2:
         st.subheader("Kmeans")
         st.write(kmeans_pred_tab_text_count)
+        # turn text_classifier.kmeans_predicted_most_common_compdesc into a dataframe
+        temp_text_df = pd.DataFrame(text_classifier.kmeans_predicted_most_common_compdesc)
+        # change the column name COMPSESC_CONDENSED to say "COMPONENT DESCRIPTION"
+        temp_text_df.rename_axis("ASSOCIATED COMPONENT DESCRIPTIONS", inplace=True)
+        # rename the column "count" to say "OCCURRENCES" in the kmeans_predicted_most_common_compdesc dataframe
+        temp_text_df.rename(columns={"count": "OCCURRENCES"}, inplace=True)
+        #text_classifier.kmeans_predicted_most_common_compdesc.rename(columns={"count": "OCCURRENCES"}, inplace=True)
+        st.write(temp_text_df)
         st.altair_chart(kmeans_fig, use_container_width=None, theme=None, selection_mode=None)
 
