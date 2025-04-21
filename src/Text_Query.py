@@ -69,7 +69,7 @@ class TextClassifier:
         # create a TfidfVectorizer object
         self.vectorizer = TfidfVectorizer()
         self.desired_clusters = len(self.df[self.compdesc_condensed].unique())
-        self.classifier_kmeans = KMeans(n_clusters=self.desired_clusters, random_state=self.random_state, n_init=100, max_iter=1000)
+        self.classifier_kmeans = KMeans(n_clusters=self.desired_clusters, random_state=self.random_state, n_init=1000, max_iter=10000)
         self.classifier_RFC = RandomForestClassifier(random_state=self.random_state)
 
         # # create a pickle file for the label encoder
@@ -261,7 +261,7 @@ class TextClassifier:
                 self.classifier_RFC = pickle.load(f)
         else:
             # fit the KMeans model to the training data
-            self.classifier_kmeans.fit(self.complaints_vectorized_train, self.df_train[col_name])
+            self.classifier_kmeans.fit(self.complaints_vectorized_train)#, self.df_train[col_name])
             # fit the Random Forest Classifier model to the training data
             self.classifier_RFC.fit(self.complaints_vectorized_train, self.df_train[col_name])
             # create a pickle file for the classifier
@@ -285,11 +285,14 @@ class TextClassifier:
         self.query_vectorized_lsa = self.lsa.transform(self.query_vectorized)
         # predict the kmeans cluster of the query text
         cluster_kmeans = self.classifier_kmeans.predict(self.query_vectorized_lsa)
+        print("KMeans Cluster: ", cluster_kmeans)
         # predict the Random Forest Classifier cluster of the query text
         cluster_RFC = self.classifier_RFC.predict(self.query_vectorized_lsa)
         # convert the kmenas predicted cluster value back to the original value from the "COMPDESC" column
         #self.cluster_kmeans_pred = self.label_encoder.inverse_transform(cluster_kmeans)
-        self.cluster_kmeans_pred = self.label_condensed_encoder.inverse_transform(cluster_kmeans)
+        #self.cluster_kmeans_pred = self.label_condensed_encoder.inverse_transform(cluster_kmeans)
+        # convert the kmeans value back to the original value from the "COMPDESC" column
+        self.cluster_kmeans_pred = cluster_kmeans       
         
         #(LabelEncoder().fit(self.df_train["COMPDESC"]).inverse_transform(cluster_kmeans))
         # convert the Random Forest Classifier predicted cluster value back to the original value from the "COMPDESC" column
@@ -332,14 +335,30 @@ class TextClassifier:
         self.df_train['y_pca_train_data'] = pca_train_data[:, 1]
         self.df_train['labels_num'] = labels
         #self.df_train['labels_words'] = self.label_encoder.inverse_transform(labels)
-        self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
+        #self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
         # copy the self.df_train to a new dataframe called filtered_df and only keep entries that equal the predicted cluster
-        cluster_df = self.df_train.copy()
-        no_cluster_df = self.df_train.copy()
+        #cluster_df = self.df_train.copy()
+        #no_cluster_df = self.df_train.copy()
         if "KMeans" in title:
-            cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_kmeans_pred[0]]
-            no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_kmeans_pred[0]]
+            self.df_train['labels'] = labels
+            cluster_df = self.df_train.copy()
+            no_cluster_df = self.df_train.copy()
+            cluster_df = cluster_df[cluster_df['labels'] == self.cluster_kmeans_pred[0]]
+            no_cluster_df = no_cluster_df[no_cluster_df['labels'] != self.cluster_kmeans_pred[0]]
+            # add the word group in front of each of the label in the list labels and then assign it to the labels_words column
+            # loop through the labels and add group in front of each of the label in the list labels
+            cluster_df['labels_words'] = "Group " + cluster_df['labels'].astype(str)
+            # print out the most frequent component descriptions for the cluster_df on the column named "self.compdesc_condensed"
+            #print("Top ", cluster_df[self.compdesc_condensed].value_counts().head(1))
+            self.kmeans_predicted_most_common_compdesc = cluster_df[self.compdesc_condensed].value_counts().head(1).index[0]
+            self.kmeans_predicted_most_common_compdesc_count = cluster_df[self.compdesc_condensed].value_counts().head(1)[0]
+            print("Most common component description in the cluster: ", self.kmeans_predicted_most_common_compdesc)
+            no_cluster_df['labels_words'] = "Group " + no_cluster_df['labels'].astype(str)
+            #["Group " + str(label) for label in labels]
         elif "Random Forest Classifier" in title:
+            self.df_train['labels_words'] = self.label_condensed_encoder.inverse_transform(labels)
+            cluster_df = self.df_train.copy()
+            no_cluster_df = self.df_train.copy()
             cluster_df = cluster_df[cluster_df['labels_words'] == self.cluster_RFC_pred[0]]
             no_cluster_df = no_cluster_df[no_cluster_df['labels_words'] != self.cluster_RFC_pred[0]]
         else:
@@ -382,7 +401,7 @@ class TextClassifier:
         PCA_no_cluster = alt.Chart(no_cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None),
             y=alt.Y('y_pca_train_data', axis=None),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Component Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom")),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='greys'),legend=alt.Legend(columns=4, title="All Component Groups", symbolLimit=0, titleFontSize=10, labelFontSize=10, orient="bottom"),type='ordinal'),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
         ).properties(title=title, width=500, height=500)#.interactive()
 
@@ -391,7 +410,7 @@ class TextClassifier:
         PCA_cluster = alt.Chart(cluster_df).mark_point(size=75).encode(
             x=alt.X('x_pca_train_data', axis=None, title='X-axis'),
             y=alt.Y('y_pca_train_data', axis=None, title='Y-axis'),
-            color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10)),
+            color=alt.Color('labels_words', scale=alt.Scale(scheme='accent'),legend=alt.Legend(title="Classification Prediction", symbolLimit=0, titleFontSize=10, labelFontSize=10),type='ordinal'),
             # fill the points in with the scale color
             fill=alt.value("#77DD77"),
             tooltip=['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'COMPDESC', 'CDESCR']
@@ -574,6 +593,7 @@ if __name__ == "__main__":
     #df_complaints.columns = ['ODINO', 'MFR_NAME', 'MAKETXT', 'MODELTXT', 'YEARTXT', 'CRASH', 'FAILDATE', 'FIRE', 'INJURED', 'DEATHS', 'COMPDESC', 'CITY', 'STATE', 'VIN', 'DATEA', 'LDATE', 'MILES', 'OCCURENCES', 'CDESCR', 'CMPL_TYPE', 'POLICE_RPT_YN', 'PURCH_DT', 'ORIG_OWNER_YN', 'ANTI_BRAKES_YN', 'CRUISE_CONT_YN', 'NUM_CYLS', 'DRIVE_TRAIN', 'FUEL_SYS', 'FUEL_TYPE',
     #          'TRANS_TYPE', 'VEH_SPEED', 'DOT', 'TIRE_SIZE', 'LOC_OF_TIRE', 'TIRE_FAIL_TYPE', 'ORIG_EQUIP_YN', 'MANUF_DT', 'SEAT_TYPE', 'RESTRAINT_TYPE', 'DEALER_NAME', 'DEALER_TEL', 'DEALER_CITY', 'DEALER_STATE', 'DEALER_ZIP', 'PROD_TYPE', 'REPAIRED_YN', 'MEDICAL_ATTN', 'VEHICLES_TOWED_YN']
 
+    # read in the test_no_agg.csv file into a pandas dataframe using the helpers directory code to get the dataset directory
     df_complaints = pd.read_csv(f"{DATASET_DIR}\\test_no_agg.csv")
 
     retrive_top_n_docs = 10
@@ -641,27 +661,10 @@ if __name__ == "__main__":
     silhouette_score_RFC = silhouette_score(text_classifier.complaints_vectorized_train, text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train))
     print(f"Silhouette Score for Random Forest Classifier: {silhouette_score_RFC}")
 
-    # pickel the most similar complaint
-    #with open(text_classifier.desired_save_path + "//" + "most_similar_complaint.pkl", "wb") as f:
-    #    pickle.dump(most_similar_complaint, f)
-
     # create a Matplotlib figure and axes
     fig1, ax1 = plt.subplots()
     # plot the clusters of the training data for the KMeans model
     text_classifier.plot_clusters(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, fig1, ax1, most_similar_complaint)
-    # create a Matplotlib figure and axes
-    #fig2, ax2 = plt.subplots()
-    # plot the clusters of the training data for the Random Forest Classifier model
-    #text_classifier.plot_clusters(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, fig2, ax2, most_similar_complaint)
 
     # plot the clusters of the training data for the KMeans model
-    plt.show()
-
-    # call the plot_clusters_alt function to plot the clusters using Altair
-    #chart = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint)
-    # alt.renderers.enable("html")
-    #chart = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint)
-    # find the top value in text_classifier.classifier_kmeans.labels_
-    #print(max(text_classifier.classifier_kmeans.labels_))
-    #print(max(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train)))
-    #print(max(text_classifier.df_train[state_encode]))          
+    plt.show()        
