@@ -146,10 +146,15 @@ if st.sidebar.button("Search and Classify"):
     cluster_kmeans_pred, cluster_RFC_pred, query_vectorized = text_classifier.predict_cluster(complaint_query)
 
     st.header("Classification:")
-    
-    kmeans_pred = "Prediction: " + cluster_kmeans_pred[0]
+
+    # generate the kmeans and RFC figures and perform the clustering
+    kmeans_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
+    RFC_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
+
+    kmeans_pred = "Prediction: Group " + str(cluster_kmeans_pred[0])
     RFC_pred = "Prediction: " + cluster_RFC_pred[0]
-    kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred
+    kmeans_pred_tab_text = "Kmeans Cluster " + kmeans_pred + " -> Component Description: " + str(text_classifier.kmeans_predicted_most_common_compdesc) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc_count) + " occurrences"
+    kmeans_pred_tab_text_count = kmeans_pred + " -> The most frequent component description of this unsupervised group is: " + str(text_classifier.kmeans_predicted_most_common_compdesc) + " with " + str(text_classifier.kmeans_predicted_most_common_compdesc_count) + " occurrences"
     RFC_pred_tab_text = "Random Forest Cluster " + RFC_pred
 
     tab1, tab2 = st.tabs([RFC_pred_tab_text, kmeans_pred_tab_text])
@@ -159,15 +164,10 @@ if st.sidebar.button("Search and Classify"):
     with tab1:
         st.header("Random Forest")
         st.write(RFC_pred)
-        # Use the native Altair theme.
-        RFC_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_RFC.predict(text_classifier.complaints_vectorized_train), 'Random Forest Classifier Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
         st.altair_chart(RFC_fig, use_container_width=None, theme=None, selection_mode=None)
 
     with tab2:
         st.subheader("Kmeans")
-        st.write(kmeans_pred)
-        # This is the default. So you can also omit the theme argument.
-        kmeans_fig = text_classifier.plot_clusters_alt(text_classifier.classifier_kmeans.labels_, 'KMeans Clusters of the Training Data', query_vectorized, most_similar_complaint.head(top_complaints_n))
-        #col_2.altair_chart(kmeans_fig, use_container_width=False)
+        st.write(kmeans_pred_tab_text_count)
         st.altair_chart(kmeans_fig, use_container_width=None, theme=None, selection_mode=None)
 
