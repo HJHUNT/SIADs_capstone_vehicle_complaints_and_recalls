@@ -59,6 +59,6 @@ https://www.nhtsa.gov/nhtsa-datasets-and-apis#
 ### Step 3: Running the Streamlit
 Run the below command in a power shell terminal to launch the streamlit application.
 ```
-(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_Audio_Text_SRS\streamlit_GUI.py'
+(env) PS C:\Repo\SIADs_Audio_Text_SRS> python -m streamlit run 'C:\Repo\SIADs_capstone_vehicle_complaints_and_recalls\streamlit_GUI.py'
 ```
 To stop the python streamlit app
